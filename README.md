@@ -32,6 +32,8 @@ Click anywhere on the water to place a drop by hand.
 
 **Words** — one per line, or comma separated. They cycle in order, one per droplet.
 
+**Lyrics** — play a track and let its words fall in time with it. See below.
+
 **Water** — drop rate, fall speed, ripple speed, ripple spread, rings per drop,
 **breaks** (frays the rings into open arcs), and **interference**.
 
@@ -42,6 +44,43 @@ plane of the water.
 
 **Export** — `PNG` saves a still. `Record` captures WebM (or MP4 in browsers that only
 support it) via `MediaRecorder`.
+
+## Lyrics mode
+
+Paste a YouTube link and press **Load**, then supply a caption file — drop a `.srt`,
+`.vtt` or `.lrc` anywhere on the page, or use the file picker. Press **Play** and each
+word falls in time with the track. Dropping an audio file (`.mp3`, `.m4a`, `.wav`, …)
+plays that locally instead of YouTube.
+
+**Captions have to be supplied; they cannot be fetched.** There is no way for a web page
+to read a YouTube video's caption text:
+
+- the IFrame Player API exposes no caption methods at all,
+- the undocumented `/api/timedtext` endpoint sends no CORS headers, so the browser
+  blocks it,
+- and the official Captions API only covers videos you own.
+
+Any automatic fetch would need a server-side proxy, which would mean this stopped being
+a static page you can open from disk. So the track plays from YouTube and the words come
+from a file you provide.
+
+Supported formats, auto-detected:
+
+| Format | Notes |
+|---|---|
+| SubRip `.srt` | words spread evenly across each cue |
+| WebVTT `.vtt` | karaoke cues with inline `<00:00:12.500>` marks give true per-word timing |
+| LRC `.lrc` | `[mm:ss.xx]` line tags |
+| plain text | untimed — words spread evenly across the track's duration |
+
+**Drop as** switches between one word per ripple and short phrases, which stays readable
+when a song moves faster than a ripple can bloom.
+
+A droplet takes time to fall, so each word is released early by exactly the fall
+duration and back-dated by however late the current frame is. The word therefore *lands*
+on its timestamp rather than starting to fall on it. Scrubbing the player resyncs
+instead of dumping the backlog on screen, dense passages are rate-limited so they cannot
+flood the canvas, and words the scheduler is hopelessly late on are discarded.
 
 ## How it works
 
@@ -137,8 +176,10 @@ worst-case per frame, against a 16.7 ms budget for 60 fps.
   over half the map radius, so starting at zero would hide most rings inside it.
 - Word text is drawn flat in screen space by default, matching the reference, where the
   word is upright while its capsule is squashed. "Lay flat" tips it into the plane.
-- Ring breaks are a pure function of `(source, ring)`, so gaps stay anchored to a ring as
-  it expands instead of crawling around it. Outer rings fray more than inner ones.
+- Ring breaks are a pure function of `(source, ring)` — never of how far the ring has
+  expanded. Scaling breakage by expansion re-rolled the gap count and widened the gaps
+  every frame, so the breaks crawled and popped. Held constant, a gap keeps its angle
+  and simply stretches with the wavefront, which is what a real break in a ripple does.
 - Droplets are drawn as a strobe — the same droplet at several earlier moments. The fall
   is quadratic in time, so evenly spaced strobe intervals leave dots whose gaps widen
   toward the water.
@@ -155,8 +196,10 @@ js/field.js     shared wave-height field
 js/ripple.js    sources, ring lifecycle, typefaces
 js/droplet.js   falling droplets and their strobe trails
 js/render.js    drawing, ring breaks, interference smoothing
-js/grain.js     riso grain
-js/controls.js  parameter state and panel wiring
-js/export.js    PNG and WebM capture
-js/main.js      boot, resize, scheduling, animation loop
+js/grain.js      riso grain
+js/controls.js   parameter state and panel wiring
+js/export.js     PNG and WebM capture
+js/player.js     YouTube embed and local audio playback
+js/lyrics.js     caption parsing and drop scheduling
+js/main.js       boot, resize, scheduling, animation loop
 ```

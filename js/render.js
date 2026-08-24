@@ -175,8 +175,12 @@
       var a = src.ringAlpha(prog);
       if (a <= 0.012) continue;
 
-      // Outer rings break up more than inner ones, which is how a real ripple frays.
-      var breaks = p.breaks * (0.35 + 0.65 * prog);
+      // Breakage is fixed per ring, never a function of how far the ring has expanded.
+      // Scaling it by progress re-rolled the gap count and widened the gaps every
+      // frame, so the breaks crawled and popped instead of sitting still. Holding it
+      // constant means a gap keeps its angle and simply stretches with the wavefront,
+      // which is what a real break in a ripple does.
+      var breaks = p.breaks * (0.65 + 0.35 * hashUnit(src.seed, k * 911 + 5));
 
       var n = buildRing(src, si, src.radiusAt(prog), disp, k, breaks);
       ctx.globalAlpha = a;

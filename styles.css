@@ -145,6 +145,105 @@ textarea:focus, select:focus {
   border-color: rgba(255, 255, 255, 0.45);
 }
 
+/* ---------- lyrics ---------- */
+
+.row { display: flex; gap: 6px; }
+
+.row input[type="text"] { flex: 1 1 auto; min-width: 0; }
+
+.row button {
+  flex: none;
+  padding: 0 10px;
+  background: transparent;
+  border: 1px solid var(--panel-line);
+  border-radius: 3px;
+  color: var(--panel-fg);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.row button:hover { background: rgba(255, 255, 255, 0.1); }
+
+input[type="text"] {
+  padding: 7px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--panel-line);
+  border-radius: 3px;
+  color: var(--panel-fg);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+input[type="text"]:focus { outline: none; border-color: rgba(255, 255, 255, 0.45); }
+input[type="text"]::placeholder { color: rgba(238, 244, 255, 0.35); }
+
+.yt-host {
+  display: none;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 13px;
+  border: 1px solid var(--panel-line);
+  border-radius: 3px;
+  overflow: hidden;
+  background: #000;
+}
+
+.yt-host.on { display: block; }
+.yt-host iframe { display: block; width: 100%; height: 100%; border: 0; }
+
+input[type="file"] {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--panel-dim);
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 8px;
+  padding: 5px 9px;
+  background: transparent;
+  border: 1px solid var(--panel-line);
+  border-radius: 3px;
+  color: var(--panel-fg);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.buttons.compact {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.slug.bad { color: #ffb4ae; }
+
+body.dragging #stage { filter: brightness(1.08); }
+
+body.dragging::after {
+  content: "Drop a caption or audio file";
+  position: fixed;
+  inset: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(255, 255, 255, 0.55);
+  border-radius: 6px;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 20;
+}
+
 /* ---------- sliders ---------- */
 
 .sliders { display: flex; flex-direction: column; gap: 9px; }

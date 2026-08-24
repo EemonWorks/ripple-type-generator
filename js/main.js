@@ -103,6 +103,16 @@
     RTG.Droplets.spawn(g.ax, g.ay, nextWord(), clock, state);
   }
 
+  /** Lyric drops carry a back-dated spawn time so the word lands on its timestamp. */
+  function lyricDrop(word, t0) {
+    var g = pickPoint();
+    RTG.Droplets.spawn(g.ax, g.ay, word, t0, state);
+  }
+
+  function lyricsDriving() {
+    return RTG.Lyrics.hasWords() && RTG.Player.isReady();
+  }
+
   function onImpact(d, at) {
     RTG.Ripples.spawn(d.ax, d.ay, d.word, at, state);
   }
@@ -126,7 +136,11 @@
     if (!state.paused) {
       clock += dt;
 
-      if (clock >= nextDrop) {
+      // A loaded track takes over scheduling: words fall on the beat instead of on a
+      // timer, and nothing drops while the track is paused.
+      if (lyricsDriving()) {
+        RTG.Lyrics.pump(clock, RTG.Droplets.fallDuration(state), lyricDrop);
+      } else if (clock >= nextDrop) {
         dropOne();
         nextDrop = clock + state.dropRate * (0.75 + Math.random() * 0.5);
       }

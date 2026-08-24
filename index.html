@@ -56,6 +56,38 @@ ERUPT</textarea>
       <div class="slider"><label for="interference">Interference</label><input type="range" id="interference" min="0" max="2.5" step="0.02" value="1"><output for="interference"></output></div>
     </div>
 
+    <div class="group-label">Lyrics <span class="hint">optional</span></div>
+
+    <div class="field">
+      <label for="ytUrl">YouTube link</label>
+      <div class="row">
+        <input type="text" id="ytUrl" placeholder="youtu.be/&hellip;" spellcheck="false">
+        <button type="button" id="btnLoadYt">Load</button>
+      </div>
+    </div>
+
+    <div class="yt-host" id="ytHost"></div>
+
+    <div class="field">
+      <label for="capFile">Captions <span class="hint">.srt .vtt .lrc</span></label>
+      <input type="file" id="capFile" accept=".srt,.vtt,.lrc,.txt,text/plain">
+    </div>
+
+    <div class="field">
+      <label for="lyricGrain">Drop as</label>
+      <select id="lyricGrain">
+        <option value="word">One word at a time</option>
+        <option value="phrase">Short phrases</option>
+      </select>
+    </div>
+
+    <div class="buttons compact">
+      <button type="button" id="btnPlay">Play</button>
+      <button type="button" id="btnLyricsClear">Unload</button>
+    </div>
+
+    <p class="slug" id="lyricStatus">Drop a caption or audio file anywhere on the page.</p>
+
     <div class="group-label">Type</div>
     <div class="field">
       <select id="fontFace">
@@ -108,6 +140,8 @@ ERUPT</textarea>
 <script src="js/droplet.js"></script>
 <script src="js/render.js"></script>
 <script src="js/export.js"></script>
+<script src="js/player.js"></script>
+<script src="js/lyrics.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/main.js"></script>
 </body>

@@ -54,6 +54,148 @@
   }
 
   var panel, toggle, recDot, recTime, btnRec, btnPause, stage;
+  var lyricStatus, btnPlay, ytHost;
+  var captionSource = '';
+  var lastShownSecond = -1;
+
+  function formatClock(sec) {
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    var s = Math.floor(sec);
+    return Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60);
+  }
+
+  function setStatus(msg, bad) {
+    lyricStatus.textContent = msg;
+    lyricStatus.classList.toggle('bad', !!bad);
+    lastShownSecond = -1;
+  }
+
+  function describeLyrics() {
+    var bits = [];
+
+    if (RTG.Lyrics.hasWords()) {
+      bits.push(RTG.Lyrics.count() + (RTG.Lyrics.isTimed()
+        ? ' timed words'
+        : ' words, untimed \u2014 spread across the track'));
+    }
+    if (RTG.Player.isReady()) {
+      bits.push(RTG.Player.mode() === 'yt' ? 'YouTube ready' : 'audio ready');
+    }
+
+    if (!bits.length) return 'Drop a caption or audio file anywhere on the page.';
+    if (RTG.Lyrics.hasWords() && RTG.Player.isReady()) return bits.join(' \u00b7 ') + '. Press Play.';
+    return bits.join(' \u00b7 ') + '.';
+  }
+
+  function readCaptions(file) {
+    var reader = new FileReader();
+
+    reader.onload = function () {
+      captionSource = String(reader.result);
+      var res = RTG.Lyrics.load(captionSource, $('lyricGrain').value);
+      if (!res.ok) {
+        captionSource = '';
+        setStatus(res.error, true);
+        return;
+      }
+      RTG.Lyrics.rewind();
+      setStatus(describeLyrics());
+    };
+
+    reader.onerror = function () { setStatus('Could not read that file.', true); };
+    reader.readAsText(file);
+  }
+
+  function isAudio(file) {
+    return /^audio\//.test(file.type) || /\.(mp3|m4a|wav|ogg|oga|flac|aac|opus)$/i.test(file.name);
+  }
+
+  function acceptFile(file) {
+    if (!file) return;
+
+    if (isAudio(file)) {
+      setStatus('Loading audio\u2026');
+      RTG.Player.loadAudio(file, function (err) {
+        if (err) { setStatus(err.message, true); return; }
+        ytHost.classList.remove('on');
+        setStatus(describeLyrics());
+      });
+      return;
+    }
+    readCaptions(file);
+  }
+
+  function initLyrics() {
+    lyricStatus = $('lyricStatus');
+    btnPlay = $('btnPlay');
+    ytHost = $('ytHost');
+
+    $('btnLoadYt').addEventListener('click', function () {
+      setStatus('Loading player\u2026');
+      RTG.Player.loadYouTube($('ytUrl').value, ytHost, function (err) {
+        if (err) { ytHost.classList.remove('on'); setStatus(err.message, true); return; }
+        ytHost.classList.add('on');
+        setStatus(describeLyrics());
+      });
+    });
+
+    $('capFile').addEventListener('change', function (e) {
+      acceptFile(e.target.files && e.target.files[0]);
+    });
+
+    // Re-parsing from the original text is what lets granularity change after loading.
+    $('lyricGrain').addEventListener('change', function (e) {
+      RTG.Lyrics.grain = e.target.value;
+      if (!captionSource) return;
+      RTG.Lyrics.load(captionSource, e.target.value);
+      RTG.Lyrics.rewind();
+      setStatus(describeLyrics());
+    });
+
+    btnPlay.addEventListener('click', function () {
+      if (!RTG.Player.isReady()) {
+        setStatus('Load a YouTube link, or drop an audio file, first.', true);
+        return;
+      }
+      RTG.Player.toggle();
+    });
+
+    $('btnLyricsClear').addEventListener('click', function () {
+      RTG.Lyrics.clear();
+      RTG.Player.unload();
+      captionSource = '';
+      ytHost.classList.remove('on');
+      ytHost.innerHTML = '';
+      $('capFile').value = '';
+      setStatus('Unloaded. Back to the word list.');
+    });
+
+    RTG.Player.onChange(function () {
+      var playing = RTG.Player.playing();
+      btnPlay.textContent = playing ? 'Pause' : 'Play';
+      btnPlay.classList.toggle('active', playing);
+
+      // Starting the track while the canvas is frozen would silently drop nothing.
+      if (playing && state.paused) $('btnPause').click();
+    });
+
+    ['dragenter', 'dragover'].forEach(function (type) {
+      window.addEventListener(type, function (e) {
+        e.preventDefault();
+        document.body.classList.add('dragging');
+      });
+    });
+
+    window.addEventListener('dragleave', function (e) {
+      if (!e.relatedTarget) document.body.classList.remove('dragging');
+    });
+
+    window.addEventListener('drop', function (e) {
+      e.preventDefault();
+      document.body.classList.remove('dragging');
+      acceptFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+    });
+  }
 
   function bindRange(id, key, onChange) {
     var el = $(id);
@@ -171,6 +313,7 @@
       });
 
       applyColours();
+      initLyrics();
     },
 
     setRecording: function (on) {
@@ -179,11 +322,21 @@
       recDot.hidden = !on;
     },
 
-    /** Refreshes the recording read-out once per frame. */
+    /** Refreshes the recording read-out and the playback clock once per frame. */
     tick: function () {
-      if (!RTG.Exporter.isRecording()) return;
-      var s = Math.floor(RTG.Exporter.elapsed());
-      recTime.textContent = Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60);
+      if (RTG.Exporter.isRecording()) {
+        var e = Math.floor(RTG.Exporter.elapsed());
+        recTime.textContent = formatClock(e);
+      }
+
+      if (RTG.Player.isReady() && RTG.Player.playing()) {
+        var sec = Math.floor(RTG.Player.time());
+        if (sec !== lastShownSecond) {
+          lastShownSecond = sec;
+          lyricStatus.classList.remove('bad');
+          lyricStatus.textContent = formatClock(sec) + ' / ' + formatClock(RTG.Player.duration());
+        }
+      }
     }
   };
 
