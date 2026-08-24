@@ -40,7 +40,10 @@ Click anywhere on the water to place a drop by hand.
 **Type** — typeface, size, and **lay flat**, which tips the word from upright into the
 plane of the water.
 
-**Camera** — tilt, bow, grain.
+**Camera** — tilt and bow.
+
+**Light** — **glow** (bloom around the strokes), **soften** (blurs the line art), and
+grain.
 
 **Export** — `PNG` saves a still. `Record` captures WebM (or MP4 in browsers that only
 support it) via `MediaRecorder`.
@@ -166,6 +169,30 @@ frames have at least two ripples genuinely overlapping.
 The field is `O(vertices × rings)`, kept cheap with a squared-distance reject before any
 `sqrt`, `cos` or `exp`. A 26 second run at 1080×1350 measures 0.97 ms mean and 2.97 ms
 worst-case per frame, against a 16.7 ms budget for 60 fps.
+
+### Glow
+
+The line art is composed on its own transparent layer rather than straight onto the
+water. Word capsules cut their hole with `destination-out` instead of filling with the
+background colour — otherwise the glow pass would pick up background-coloured discs and
+bloom them as coloured smudges.
+
+The bloom sums three blurred copies at widely separated radii: a tight halo hugging the
+stroke, a mid spread, and a wide soft wash. One blur alone just reads as a thicker line;
+it is the separation of radii that produces a long, soft falloff. Each copy is reduced
+before being blurred, which is both far cheaper than blurring at full resolution and
+most of the blur itself.
+
+Light ink on dark water blooms additively with `lighter`. A dark-ink preset on pale
+water switches to `multiply`, since adding light to an already-bright background would
+wash the glow away to nothing.
+
+Compositing happens with the transform reset to identity, so a blur radius means the
+same thing regardless of device pixel ratio. Canvas filters are used where available,
+with a downscale-and-upscale round trip as the fallback.
+
+Measured at 2084×1778 with a GPU sync each frame: 2.72 ms with glow off, 5.15 ms at the
+default settings, against a 16.7 ms budget for 60 fps.
 
 ### Other details
 

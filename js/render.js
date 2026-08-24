@@ -162,6 +162,121 @@
     return box;
   }
 
+  /* ---------------- glow layers ---------------- */
+
+  var art = null, artCtx = null;
+  var blur = null, blurCtx = null;
+
+  /** Canvas filters are widely but not universally supported; downscaling is the fallback. */
+  var canFilter = (function () {
+    try {
+      var probe = document.createElement('canvas').getContext('2d');
+      probe.filter = 'blur(2px)';
+      return probe.filter === 'blur(2px)';
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  function ensureArt(W, H, devW, devH, dpr) {
+    if (!art) {
+      art = document.createElement('canvas');
+      artCtx = art.getContext('2d');
+    }
+    if (art.width !== devW || art.height !== devH) {
+      art.width = devW;
+      art.height = devH;
+    }
+    artCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    artCtx.clearRect(0, 0, W, H);
+    return art;
+  }
+
+  function ensureBlur(w, h) {
+    if (!blur) {
+      blur = document.createElement('canvas');
+      blurCtx = blur.getContext('2d');
+    }
+    if (blur.width !== w || blur.height !== h) {
+      blur.width = w;
+      blur.height = h;
+    }
+    blurCtx.setTransform(1, 0, 0, 1, 0, 0);
+    blurCtx.clearRect(0, 0, w, h);
+    return blur;
+  }
+
+  function luminance(hex) {
+    var h = String(hex).replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    if (isNaN(n)) return 0.5;
+    return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255;
+  }
+
+  /**
+   * Additive bloom. The art is reduced before blurring, which is both much cheaper than
+   * blurring at full resolution and most of the blur itself. Two octaves are summed: a
+   * tight halo that hugs the stroke, and a wide one for the soft falloff.
+   *
+   * Light ink on dark water blooms additively. Dark ink on a pale preset has to darken
+   * instead, or `lighter` would wash the glow out to nothing.
+   */
+  function drawGlow(ctx, source, devW, devH, amount, p) {
+    // Three octaves: a tight halo hugging the stroke, a mid spread, and a wide soft
+    // wash. Summing widely separated radii is what gives a bloom its long falloff --
+    // a single blur just looks like a thicker line.
+    var octaves = [
+      { scale: 0.25, radius: devH * 0.008, weight: 1 },
+      { scale: 0.10, radius: devH * 0.016, weight: 0.7 },
+      { scale: 0.04, radius: devH * 0.030, weight: 0.45 }
+    ];
+
+    ctx.globalCompositeOperation = luminance(p.ink) >= luminance(p.bg) ? 'lighter' : 'multiply';
+
+    for (var i = 0; i < octaves.length; i++) {
+      var o = octaves[i];
+      var w = Math.max(1, Math.round(devW * o.scale));
+      var h = Math.max(1, Math.round(devH * o.scale));
+
+      var b = ensureBlur(w, h);
+      blurCtx.filter = canFilter ? 'blur(' + (o.radius * o.scale).toFixed(2) + 'px)' : 'none';
+      blurCtx.drawImage(source, 0, 0, w, h);
+      blurCtx.filter = 'none';
+
+      ctx.globalAlpha = amount * o.weight;
+      ctx.drawImage(b, 0, 0, devW, devH);
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+
+  /** Lays the art down, optionally softened. */
+  function drawArtLayer(ctx, source, devW, devH, radius) {
+    ctx.globalAlpha = 1;
+
+    if (radius < 0.4) {
+      ctx.drawImage(source, 0, 0, devW, devH);
+      return;
+    }
+
+    if (canFilter) {
+      ctx.filter = 'blur(' + radius.toFixed(2) + 'px)';
+      ctx.drawImage(source, 0, 0, devW, devH);
+      ctx.filter = 'none';
+      return;
+    }
+
+    // Without canvas filters, a round trip through a smaller canvas softens the edges.
+    var f = 1 / (1 + radius * 0.6);
+    var w = Math.max(1, Math.round(devW * f));
+    var h = Math.max(1, Math.round(devH * f));
+    var b = ensureBlur(w, h);
+    blurCtx.drawImage(source, 0, 0, w, h);
+    ctx.drawImage(b, 0, 0, devW, devH);
+  }
+
   function drawSource(ctx, src, si, t, p) {
     // Displacement is scaled by this ripple's own ring spacing so the interference
     // stays proportionate whether the ripple is large or small. The angular smoothing
@@ -201,8 +316,13 @@
     ctx.globalAlpha = wa;
     trace(ctx, cn);
     ctx.closePath();
-    ctx.fillStyle = p.bg;
+
+    // Punching a hole rather than filling with the water colour keeps the art layer
+    // free of background-coloured blobs, which would otherwise bloom as coloured
+    // smudges in the glow pass. The backdrop shows through the hole either way.
+    ctx.globalCompositeOperation = 'destination-out';
     ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
     ctx.stroke();
 
     var Type = RTG.Type;
@@ -267,26 +387,40 @@
 
   var Render = {
     frame: function (ctx, W, H, t, p, devW, devH) {
+      var dpr = devW / W;
+
       backdrop(ctx, W, H, p);
 
       RTG.Ripples.populateField(t);
+
+      // The line art is always composed on its own transparent layer, so the capsule
+      // masks can cut holes and the glow pass has clean ink to work from.
+      ensureArt(W, H, devW, devH, dpr);
+      var a = artCtx;
 
       // Far to near, so nearer capsules mask the ripples behind them.
       var list = RTG.Ripples.list;
       var order = [];
       for (var i = 0; i < list.length; i++) order.push(i);
-      order.sort(function (a, b) { return list[a].ay - list[b].ay; });
+      order.sort(function (x, y) { return list[x].ay - list[y].ay; });
 
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = p.ink;
-      ctx.lineWidth = RTG.util.clamp(0.0024 * H, 1.25, 7);
+      a.lineJoin = 'round';
+      a.lineCap = 'round';
+      a.strokeStyle = p.ink;
+      a.lineWidth = RTG.util.clamp(0.0024 * H, 1.25, 7);
 
       for (var j = 0; j < order.length; j++) {
-        drawSource(ctx, list[order[j]], order[j], t, p);
+        drawSource(a, list[order[j]], order[j], t, p);
       }
 
-      drawDroplets(ctx, t, p);
+      drawDroplets(a, t, p);
+
+      // Composite in device pixels so blur radii mean the same thing at any DPR.
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if ((p.glow || 0) > 0.01) drawGlow(ctx, art, devW, devH, p.glow, p);
+      drawArtLayer(ctx, art, devW, devH, (p.soften || 0) * 0.018 * devH);
+      ctx.restore();
 
       ctx.globalAlpha = 1;
       RTG.Grain.apply(ctx, devW, devH, p.grain);

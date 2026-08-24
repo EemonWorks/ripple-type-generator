@@ -17,7 +17,9 @@
     bow: 0.72,
     typeSize: 1,
     typeTilt: 0,
-    font: 'poppins',
+    font: 'inter',
+    glow: 0.45,
+    soften: 0.12,
     grain: 0.055,
     bg: '#5e9de0',
     ink: '#f0f5fd',
@@ -263,6 +265,8 @@
       bindRange('bow', 'bow', camChange);
       bindRange('typeSize', 'typeSize');
       bindRange('typeTilt', 'typeTilt');
+      bindRange('glow', 'glow');
+      bindRange('soften', 'soften');
       bindRange('grain', 'grain');
 
       var fontSel = $('fontFace');

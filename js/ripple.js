@@ -26,6 +26,7 @@
    * geometric sans looks wrong on a condensed or a serif.
    */
   var FACES = {
+    inter: { family: '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif', weight: 500, tracking: 0.045 },
     poppins: { family: '"Poppins", "Century Gothic", "Avenir Next", system-ui, sans-serif', weight: 500, tracking: 0.075 },
     grotesk: { family: '"Space Grotesk", "Avenir Next", system-ui, sans-serif', weight: 500, tracking: 0.055 },
     bebas: { family: '"Bebas Neue", "Haettenschweiler", Impact, sans-serif', weight: 400, tracking: 0.12 },
