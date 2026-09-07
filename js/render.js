@@ -75,16 +75,7 @@
     return false;
   }
 
-  /**
-   * Projects one ring into the vertex buffers, displacing each vertex radially by the
-   * interference field of every other source. Returns the vertex count.
-   *
-   * The raw field is far steeper in angle than a polyline can carry: a ring crossing a
-   * neighbour picks up a dozen or more fringes, and the radius can swing by most of a
-   * segment length between adjacent vertices, which shows up as a staircase. Two box
-   * passes over the displacement remove that. It is not only a sampling fix -- real
-   * water damps short wavelengths the same way, so the surviving bend is the broad one.
-   */
+  // Smooth the sampled displacement around the ring to keep narrow fringes from aliasing.
   function buildRing(src, si, R, disp, ring, breaks) {
     var cam = RTG.Camera;
     var Field = RTG.Field;
@@ -166,7 +157,7 @@
 
   function createSurface() {
     var canvas = document.createElement('canvas');
-    return { canvas: canvas, ctx: canvas.getContext('2d') };
+    return { canvas: canvas, ctx: canvas.getContext('2d', { willReadFrequently: true }) };
   }
 
   var art = createSurface();
@@ -177,6 +168,12 @@
   var textLayer = RTG.Blur.create();
   var textGlowLayers = [RTG.Blur.create(), RTG.Blur.create(), RTG.Blur.create()];
   var words = [];
+  var order = [];
+  var glowPasses = [
+    { radius: 0.008, weight: 1 },
+    { radius: 0.016, weight: 0.7 },
+    { radius: 0.030, weight: 0.45 }
+  ];
 
   function prepareSurface(surface, W, H, devW, devH, dpr) {
     if (surface.canvas.width !== devW || surface.canvas.height !== devH) {
@@ -199,17 +196,12 @@
 
   function drawGlow(ctx, source, devW, devH, amount, p, layers) {
     layers = layers || glowLayers;
-    var octaves = [
-      { radius: devH * 0.008, weight: 1 },
-      { radius: devH * 0.016, weight: 0.7 },
-      { radius: devH * 0.030, weight: 0.45 }
-    ];
 
     ctx.globalCompositeOperation = luminance(p.ink) >= luminance(p.bg) ? 'lighter' : 'multiply';
 
-    for (var i = 0; i < octaves.length; i++) {
-      var o = octaves[i];
-      var b = layers[i].render(source, devW, devH, o.radius, p.ink);
+    for (var i = 0; i < glowPasses.length; i++) {
+      var o = glowPasses[i];
+      var b = layers[i].render(source, source.width, source.height, o.radius * source.height, p.ink);
       ctx.globalAlpha = Math.min(1, amount * o.weight);
       ctx.drawImage(b, 0, 0, devW, devH);
     }
@@ -227,15 +219,12 @@
       return;
     }
 
-    var b = softLayer.render(source, devW, devH, radius, ink);
+    var b = softLayer.render(source, source.width, source.height, radius * source.height / devH, ink);
     ctx.drawImage(b, 0, 0, devW, devH);
   }
 
   function drawSource(ctx, src, si, t, p) {
-    // Displacement is scaled by this ripple's own ring spacing so the interference
-    // stays proportionate whether the ripple is large or small. The angular smoothing
-    // in buildRing costs amplitude, so this is larger than the raw field would need.
-    var disp = p.interference * 0.7 * src.spacing;
+    var disp = RTG.Ripples.list.length > 1 ? p.interference * 0.7 * src.spacing : 0;
 
     for (var k = 0; k < src.ringCount; k++) {
       var prog = src.progressOf(k, t);
@@ -244,11 +233,7 @@
       var a = src.ringAlpha(prog);
       if (a <= 0.012) continue;
 
-      // Breakage is fixed per ring, never a function of how far the ring has expanded.
-      // Scaling it by progress re-rolled the gap count and widened the gaps every
-      // frame, so the breaks crawled and popped instead of sitting still. Holding it
-      // constant means a gap keeps its angle and simply stretches with the wavefront,
-      // which is what a real break in a ripple does.
+      // Fix gaps to the ring's seed rather than its age, so they do not crawl.
       var breaks = p.breaks * (0.65 + 0.35 * hashUnit(src.seed, k * 911 + 5));
 
       var n = buildRing(src, si, src.radiusAt(prog), disp, k, breaks);
@@ -353,6 +338,10 @@
       var textRadius = p.sharpType ? 0 : (p.textBlur || 0) * 0.025 * shortSide * dpr;
       var textGlow = p.textGlow || 0;
       var textEffects = textRadius > 0 || textGlow > 0;
+      var ringRadius = diffuse ? p.inkBlur * 0.04 * shortSide * dpr : (p.soften || 0) * 0.018 * devH;
+      // Blurred artwork needs no supersampled source. Keep sharp strokes and text
+      // at export resolution, and scale the blur kernel with its source layer.
+      var artDpr = ringRadius >= 0.4 ? Math.min(dpr, 1) : dpr;
       words.length = 0;
 
       backdrop(ctx, W, H, p);
@@ -362,13 +351,13 @@
 
       // The line art is always composed on its own transparent layer, so the capsule
       // masks can cut holes and the glow pass has clean ink to work from.
-      prepareSurface(art, W, H, devW, devH, dpr);
+      prepareSurface(art, W, H, Math.round(W * artDpr), Math.round(H * artDpr), artDpr);
       var a = art.ctx;
 
       // Far to near, so nearer capsules mask the ripples behind them.
       var list = RTG.Ripples.list;
-      var order = [];
-      for (var i = 0; i < list.length; i++) order.push(i);
+      order.length = list.length;
+      for (var i = 0; i < list.length; i++) order[i] = i;
       order.sort(function (x, y) { return list[x].ay - list[y].ay; });
 
       a.lineJoin = 'round';
@@ -392,13 +381,13 @@
       if (diffuse) {
         // Coloured coverage on paper, not additive light; there is no crisp stroke
         // redrawn on top. Wider ink bands keep the colour rich as the blur expands.
-        var radius = p.inkBlur * 0.04 * shortSide * dpr;
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
-        ctx.drawImage(inkLayer.render(art.canvas, devW, devH, radius, p.ink), 0, 0, devW, devH);
+        ctx.drawImage(inkLayer.render(art.canvas, art.canvas.width, art.canvas.height,
+          ringRadius * art.canvas.height / devH, p.ink), 0, 0, devW, devH);
       } else {
         if ((p.glow || 0) > 0.01) drawGlow(ctx, art.canvas, devW, devH, p.glow, p);
-        drawArtLayer(ctx, art.canvas, devW, devH, (p.soften || 0) * 0.018 * devH, p.ink);
+        drawArtLayer(ctx, art.canvas, devW, devH, ringRadius, p.ink);
       }
       ctx.restore();
 

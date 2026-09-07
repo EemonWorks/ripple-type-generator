@@ -238,6 +238,7 @@ textarea, select {
 textarea { min-height: 80px; max-height: 240px; resize: vertical; }
 select { min-height: 36px; cursor: pointer; }
 .hint { margin: 10px 0 0; color: var(--panel-dim); font-size: 11px; line-height: 1.6; }
+#fontStatus:empty { display: none; }
 
 /* Native range inputs retain keyboard/touch behavior; only their tracks are styled. */
 .sliders { display: flex; flex-direction: column; gap: 16px; }

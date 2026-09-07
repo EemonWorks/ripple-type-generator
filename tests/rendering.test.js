@@ -3,6 +3,7 @@
 
   var results = [];
   var output = document.getElementById('results');
+  var frameDriver;
   window.renderingResults = { done: false, results: results };
 
   function assert(condition, message) {
@@ -39,6 +40,43 @@
     return true;
   }
 
+  function installFrameDriver() {
+    var request = window.requestAnimationFrame;
+    var cancel = window.cancelAnimationFrame;
+    var descriptor = Object.getOwnPropertyDescriptor(document, 'hidden');
+    var queue = new Map(), nextId = 0, now = 0, hidden = false;
+    window.requestAnimationFrame = function (callback) {
+      queue.set(++nextId, callback);
+      return nextId;
+    };
+    window.cancelAnimationFrame = function (id) { queue.delete(id); };
+    Object.defineProperty(document, 'hidden', { configurable: true, get: function () { return hidden; } });
+    return {
+      pending: function () { return queue.size; },
+      step: function () {
+        var callbacks = Array.from(queue.values());
+        queue.clear();
+        now += 1000 / 60;
+        callbacks.forEach(function (callback) { callback(now); });
+      },
+      setHidden: function (value) {
+        hidden = value;
+        document.dispatchEvent(new Event('visibilitychange'));
+      },
+      restore: function () {
+        if (window.RTG && RTG.Controls) {
+          RTG.Controls.state.paused = true;
+          this.step();
+        }
+        queue.clear();
+        window.requestAnimationFrame = request;
+        window.cancelAnimationFrame = cancel;
+        if (descriptor) Object.defineProperty(document, 'hidden', descriptor);
+        else delete document.hidden;
+      }
+    };
+  }
+
   async function loadApp() {
     var url = new URL('../index.html', location.href);
     var response = await fetch(url, { cache: 'no-store' });
@@ -50,6 +88,7 @@
       if (child.tagName !== 'SCRIPT') fixture.appendChild(document.importNode(child, true));
     });
     document.body.appendChild(fixture);
+    frameDriver = installFrameDriver();
     var scripts = Array.from(page.querySelectorAll('script[src]'));
     for (var i = 0; i < scripts.length; i++) {
       await new Promise(function (resolve, reject) {
@@ -111,6 +150,7 @@
       assertApproved();
       assert(doc.getElementById('preset').value === 'default', 'Default artwork is not selected');
       assert(R.Controls.state.pageMode === 'fit', 'Page should still fit the window');
+      assert(!doc.querySelector('link[href*="fonts.googleapis.com"]'), 'Startup eagerly loads optional web fonts');
     });
 
     test('Welcome opens with a labelled dialog and a focused start button', function () {
@@ -240,6 +280,89 @@
       doc.getElementById('lineWeight').dispatchEvent(new Event('input'));
       select('preset', 'default');
       assertApproved();
+    });
+
+    test('Paused rendering is idle and setting changes coalesce into one frame', function () {
+      frameDriver.step();
+      var originalFrame = R.Render.frame;
+      var originalPng = R.Exporter.png;
+      var input = doc.getElementById('glow'), value = input.value;
+      var paints = 0;
+      R.Render.frame = function () { paints++; return originalFrame.apply(this, arguments); };
+      try {
+        assert(frameDriver.pending() === 0, 'Paused animation keeps scheduling frames');
+        input.value = '0.3';
+        input.dispatchEvent(new Event('input'));
+        input.value = '0.4';
+        input.dispatchEvent(new Event('input'));
+        assert(frameDriver.pending() === 1, 'Rapid controls queued multiple frames');
+        frameDriver.step();
+        assert(paints === 1 && frameDriver.pending() === 0, 'Paused control change did not draw once');
+        input.value = '0.5';
+        input.dispatchEvent(new Event('input'));
+        R.Exporter.png = function () {
+          assert(paints === 2 && R.Controls.state.glow === 0.5, 'PNG did not flush the latest settings');
+        };
+        doc.getElementById('btnPng').click();
+        frameDriver.step();
+        assert(paints === 2, 'An already-flushed frame was rendered again');
+        doc.getElementById('btnPause').click();
+        frameDriver.step();
+        assert(frameDriver.pending() === 1, 'Play did not restart animation');
+        doc.getElementById('btnPause').click();
+        frameDriver.step();
+        assert(frameDriver.pending() === 0, 'Pause did not return to idle');
+      } finally {
+        R.Controls.state.paused = true;
+        R.Render.frame = originalFrame;
+        R.Exporter.png = originalPng;
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        frameDriver.step();
+      }
+    });
+
+    test('Hidden tabs defer paint work until visible again', function () {
+      var original = R.Render.frame;
+      var input = doc.getElementById('glow'), value = input.value;
+      var paints = 0;
+      R.Render.frame = function () { paints++; return original.apply(this, arguments); };
+      try {
+        frameDriver.setHidden(true);
+        input.value = '0.6';
+        input.dispatchEvent(new Event('input'));
+        frameDriver.step();
+        assert(paints === 0 && frameDriver.pending() === 0, 'Hidden page kept rendering');
+        frameDriver.setHidden(false);
+        frameDriver.step();
+        assert(paints === 1 && frameDriver.pending() === 0, 'Visible paused page did not refresh');
+      } finally {
+        R.Render.frame = original;
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        frameDriver.step();
+      }
+    });
+
+    test('Grouped wave sampling matches the direct field calculation', function () {
+      var rings = [
+        [0, 0, 0, 30, 1, 8], [0, 0, 0, 55, 0.7, 8],
+        [1, 35, 20, 25, 0.9, 6], [1, 35, 20, 45, 0.5, 6]
+      ];
+      R.Field.begin();
+      rings.forEach(function (r) { R.Field.add.apply(R.Field, r); });
+      for (var x = -60; x <= 80; x += 7) {
+        for (var y = -40; y <= 70; y += 9) {
+          var expected = 0;
+          rings.forEach(function (r) {
+            if (r[0] === 0) return;
+            var u = (Math.hypot(x - r[1], y - r[2]) - r[3]) / r[5];
+            if (Math.abs(u) <= 2.5) expected += r[4] * Math.cos(Math.PI * u) * Math.exp(-0.5 * u * u);
+          });
+          assert(Math.abs(R.Field.sample(x, y, 0) - expected) < 1e-10, 'Optimized field changed wave heights');
+        }
+      }
+      R.Field.begin();
     });
 
     test('Sliders and sharp-text checkbox update live state', function () {
@@ -459,6 +582,54 @@
       });
     });
 
+    test('Recording cleans up tracks and uses the actual video container', function () {
+      var NativeRecorder = window.MediaRecorder;
+      var alert = window.alert;
+      var click = HTMLAnchorElement.prototype.click;
+      var last, stopped = 0, ended = 0, filename = '', messages = [], failStart = false;
+      function FakeRecorder() { this.state = 'inactive'; this.mimeType = 'video/mp4'; last = this; }
+      FakeRecorder.isTypeSupported = function () { return true; };
+      FakeRecorder.prototype.start = function () {
+        if (failStart) throw new Error('Encoder unavailable');
+        this.state = 'recording';
+      };
+      FakeRecorder.prototype.stop = function () {
+        if (this.state === 'inactive') throw new Error('Already stopped');
+        this.state = 'inactive';
+      };
+      var fakeCanvas = { captureStream: function () {
+        return { getTracks: function () { return [{ stop: function () { stopped++; } }]; } };
+      } };
+      window.MediaRecorder = FakeRecorder;
+      window.alert = function (message) { messages.push(message); };
+      HTMLAnchorElement.prototype.click = function () { filename = this.download; };
+      try {
+        assert(R.Exporter.toggle(fakeCanvas, function () { ended++; }), 'Recording did not start');
+        R.Exporter.toggle(fakeCanvas);
+        R.Exporter.toggle(fakeCanvas);
+        assert(R.Exporter.isRecording(), 'Size lock released before final data');
+        last.ondataavailable({ data: new Blob(['video'], { type: 'video/mp4' }) });
+        last.onstop();
+        assert(stopped === 1 && ended === 1 && !R.Exporter.isRecording(), 'Recording resources were not released');
+        assert(filename.endsWith('.mp4'), 'Video was labelled with the requested rather than actual container');
+        failStart = true;
+        assert(!R.Exporter.toggle(fakeCanvas, function () { ended++; }), 'Failed encoder reported success');
+        assert(stopped === 2 && !R.Exporter.isRecording() && messages.length === 1, 'Start failure leaked a track or was silent');
+        failStart = false;
+        R.Exporter.toggle(fakeCanvas, function () { ended++; });
+        last.onerror({ error: new Error('Encoding failed') });
+        last.onstop();
+        assert(stopped === 3 && ended === 3 && !R.Exporter.isRecording(), 'Error cleanup ran twice or leaked resources');
+        R.Exporter.png({ toBlob: function (callback) { callback(null); } });
+        assert(messages.length === 3, 'PNG failure was not surfaced');
+      } finally {
+        if (R.Exporter.isRecording() && last.onstop) last.onstop();
+        window.MediaRecorder = NativeRecorder;
+        window.alert = alert;
+        HTMLAnchorElement.prototype.click = click;
+      }
+    });
+
     test('Kerning uses the same spacing for measurement and centered drawing', function () {
       var ctx = canvas(300, 100).getContext('2d');
       var text = 'AVera', size = 30;
@@ -675,6 +846,7 @@
     }
 
     window.renderingResults.done = true;
+    frameDriver.restore();
     output.textContent = results.map(function (r) {
       return (r.passed ? 'PASS ' : 'FAIL ') + r.name + (r.error ? ': ' + r.error : '');
     }).join('\n');
@@ -682,6 +854,7 @@
   }
 
   run().catch(function (error) {
+    if (frameDriver) frameDriver.restore();
     results.push({ name: 'Rendering checks', passed: false, error: error.message });
     window.renderingResults.done = true;
     output.textContent = 'FAIL: ' + error.message;

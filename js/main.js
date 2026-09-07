@@ -12,6 +12,16 @@
 
   var W = 0, H = 0, dpr = 1;
   var clock = 0, last = 0, nextDrop = 0.3, wordIndex = 0;
+  var frameRequest = 0, dirty = true;
+
+  function schedule() {
+    if (!frameRequest && !document.hidden && W && H) frameRequest = requestAnimationFrame(loop);
+  }
+
+  function invalidate() {
+    dirty = true;
+    schedule();
+  }
 
   function resize() {
     var chrome = getComputedStyle(frame);
@@ -60,14 +70,10 @@
     canvas.style.width = (W * fit) + 'px';
     canvas.style.height = (H * fit) + 'px';
     RTG.Controls.setCanvasSize(canvas.width, canvas.height);
-    paint();
+    invalidate();
   }
 
-  /**
-   * `bow` runs 0 (nearly flat affine squash) to 1 (hard perspective). The camera wants
-   * a perspective length, and the useful range is strongly non-linear -- the reference
-   * sits near 0.04 -- so it is mapped with a curve rather than exposed raw.
-   */
+  // Map the bow control to a useful, non-linear perspective range.
   function configureCamera() {
     var perspective = 0.02 + 0.55 * Math.pow(1 - state.bow, 2.5);
     RTG.Camera.configure(W, H, state.tilt, perspective);
@@ -88,19 +94,7 @@
     return false;
   }
 
-  /**
-   * Picks a landing point. Most drops are placed near recent activity, because ripples
-   * that never meet never interfere -- and interference is the whole point.
-   *
-   * The clustering offset is taken in *map* space, not screen space. Screen y is
-   * divided by s0 to reach the map, so two ripples a modest gap apart on screen are an
-   * enormous distance apart on the water and would never touch. Offsetting by map
-   * distance guarantees the rings genuinely overlap, and the range keeps the capsules
-   * clear while bringing the rings well inside one another.
-   *
-   * The anchor is drawn from anywhere in the list rather than always the newest, which
-   * would random-walk the whole composition into one corner.
-   */
+  // Cluster in map space so neighboring ripples can interact, while avoiding capsules.
   function pickPoint() {
     var cam = RTG.Camera;
     var list = RTG.Ripples.list;
@@ -142,6 +136,7 @@
   function dropOne() {
     var g = pickPoint();
     RTG.Droplets.spawn(g.ax, g.ay, nextWord(), clock, state);
+    invalidate();
   }
 
   function onImpact(d, at) {
@@ -157,12 +152,10 @@
   }
 
   function loop(now) {
-    requestAnimationFrame(loop);
+    frameRequest = 0;
 
-    if (!last) last = now;
-    var dt = (now - last) / 1000;
+    var dt = last ? Math.min((now - last) / 1000, 0.06) : 0;
     last = now;
-    if (dt > 0.06) dt = 0.06;
 
     if (!state.paused) {
       clock += dt;
@@ -176,24 +169,34 @@
       RTG.Ripples.update(clock);
     }
 
-    paint();
+    var running = !state.paused || RTG.Exporter.isRecording();
+    if (dirty || running) paint();
     RTG.Controls.tick();
+    if (running) schedule();
+    else last = 0;
   }
 
   function paint() {
     RTG.Render.frame(ctx, W, H, clock, state, canvas.width, canvas.height);
+    dirty = false;
   }
 
   RTG.Controls.init({
     onCameraChange: configureCamera,
     onLayoutChange: resize,
+    onChange: invalidate,
     onDrop: dropOne,
     onClear: function () {
       RTG.Ripples.clear();
       RTG.Droplets.clear();
+      invalidate();
     },
-    onPng: function () { RTG.Exporter.png(canvas); },
+    onPng: function () {
+      paint();
+      RTG.Exporter.png(canvas);
+    },
     onRecord: function () {
+      paint();
       var on = RTG.Exporter.toggle(canvas, function () {
         RTG.Controls.setRecording(false);
         resize();
@@ -207,13 +210,23 @@
     var rect = canvas.getBoundingClientRect();
     RTG.Droplets.spawn((e.clientX - rect.left) * W / rect.width,
       (e.clientY - rect.top) * H / rect.height, nextWord(), clock, state);
+    invalidate();
   });
 
   window.addEventListener('resize', resize);
   if (window.ResizeObserver) new ResizeObserver(resize).observe(viewport);
+  document.addEventListener('visibilitychange', function () {
+    last = 0;
+    if (document.hidden) {
+      cancelAnimationFrame(frameRequest);
+      frameRequest = 0;
+    } else {
+      invalidate();
+    }
+  });
 
   resize();
   seed();
   paint();
-  requestAnimationFrame(loop);
+  schedule();
 })(window.RTG = window.RTG || {});

@@ -1,12 +1,4 @@
-/**
- * Ripple sources: a word in a capsule, with rings expanding away from it.
- *
- * Everything is authored in screen pixels. Ring radii live in map space (see camera.js)
- * where ripples are true circles, so the interference field can work in plain Euclidean
- * distance. Because the projection bows a ring outward, a ring of map radius R draws at
- * screen half-width R / sqrt(1 - m^2); sizes are therefore specified as the *drawn*
- * radius and inverted back to R.
- */
+/** Ripple lifecycles, text layout, and optional typeface loading. */
 (function (RTG) {
   'use strict';
 
@@ -27,20 +19,21 @@
    */
   var FACES = {
     win98: { family: '"Pixelated MS Sans Serif", "MS Sans Serif", Tahoma, sans-serif', weight: 400, tracking: 0.045 },
-    inter: { family: '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif', weight: 500, tracking: 0.045 },
-    poppins: { family: '"Poppins", "Century Gothic", "Avenir Next", system-ui, sans-serif', weight: 500, tracking: 0.075 },
-    grotesk: { family: '"Space Grotesk", "Avenir Next", system-ui, sans-serif', weight: 500, tracking: 0.055 },
-    bebas: { family: '"Bebas Neue", "Haettenschweiler", Impact, sans-serif', weight: 400, tracking: 0.12 },
-    anton: { family: '"Anton", Impact, "Arial Black", sans-serif', weight: 400, tracking: 0.05 },
-    plexmono: { family: '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace', weight: 500, tracking: 0.06 },
-    playfair: { family: '"Playfair Display", Georgia, "Times New Roman", serif', weight: 600, tracking: 0.055 }
+    inter: { family: '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif', weight: 500, tracking: 0.045, google: 'Inter:wght@500' },
+    poppins: { family: '"Poppins", "Century Gothic", "Avenir Next", system-ui, sans-serif', weight: 500, tracking: 0.075, google: 'Poppins:wght@500' },
+    grotesk: { family: '"Space Grotesk", "Avenir Next", system-ui, sans-serif', weight: 500, tracking: 0.055, google: 'Space Grotesk:wght@500' },
+    bebas: { family: '"Bebas Neue", "Haettenschweiler", Impact, sans-serif', weight: 400, tracking: 0.12, google: 'Bebas Neue' },
+    anton: { family: '"Anton", Impact, "Arial Black", sans-serif', weight: 400, tracking: 0.05, google: 'Anton' },
+    plexmono: { family: '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace', weight: 500, tracking: 0.06, google: 'IBM Plex Mono:wght@500' },
+    playfair: { family: '"Playfair Display", Georgia, "Times New Roman", serif', weight: 600, tracking: 0.055, google: 'Playfair Display:wght@600' }
   };
+  var fontRequests = {};
 
   var Type = {
     faces: FACES,
-    family: FACES.poppins.family,
-    weight: FACES.poppins.weight,
-    tracking: FACES.poppins.tracking,
+    family: FACES.win98.family,
+    weight: FACES.win98.weight,
+    tracking: FACES.win98.tracking,
     revision: 0,
 
     setFace: function (key) {
@@ -49,6 +42,38 @@
       this.weight = f.weight;
       this.tracking = f.tracking;
       return f;
+    },
+
+    loadFace: function (key) {
+      if (fontRequests[key]) return fontRequests[key];
+      var face = FACES[key];
+      if (!face) return Promise.reject(new Error('Unknown typeface: ' + key));
+      var link = null;
+      var stylesheet = Promise.resolve();
+      if (face.google) {
+        stylesheet = new Promise(function (resolve, reject) {
+          var url = new URL('https://fonts.googleapis.com/css2');
+          url.searchParams.set('family', face.google);
+          url.searchParams.set('display', 'swap');
+          link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = url.href;
+          link.onload = resolve;
+          link.onerror = function () { reject(new Error('Unable to load the font stylesheet')); };
+          document.head.appendChild(link);
+        });
+      }
+      fontRequests[key] = stylesheet.then(function () {
+        return document.fonts.load(face.weight + ' 48px ' + face.family.split(',')[0]);
+      }).then(function (loaded) {
+        if (face.google && !loaded.length) throw new Error('The requested font is unavailable');
+        Type.revision++;
+      }).catch(function (error) {
+        delete fontRequests[key];
+        if (link) link.remove();
+        throw error;
+      });
+      return fontRequests[key];
     },
 
     font: function (px) { return this.weight + ' ' + px.toFixed(2) + 'px ' + this.family; },

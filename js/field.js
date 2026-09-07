@@ -50,19 +50,26 @@
     /** Summed height at ground point (x, t), ignoring rings owned by `exclude`. */
     sample: function (x, t, exclude) {
       var h = 0;
+      var previous = -1, d2 = 0, distance = -1;
 
       for (var i = 0; i < count; i++) {
         if (owner[i] === exclude) continue;
 
-        var dx = x - cX[i];
-        var dt = t - cT[i];
-        var d2 = dx * dx + dt * dt;
+        // Rings are added source by source; their centre distance is identical.
+        if (owner[i] !== previous) {
+          var dx = x - cX[i];
+          var dt = t - cT[i];
+          d2 = dx * dx + dt * dt;
+          distance = -1;
+          previous = owner[i];
+        }
 
         if (d2 > hi2[i]) continue;
         var l = lo2[i];
         if (l > 0 && d2 < l) continue;
 
-        var u = (Math.sqrt(d2) - rad[i]) / wid[i];
+        if (distance < 0) distance = Math.sqrt(d2);
+        var u = (distance - rad[i]) / wid[i];
         h += amp[i] * Math.cos(PI * u) * Math.exp(-0.5 * u * u);
       }
 

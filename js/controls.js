@@ -93,6 +93,7 @@
 
   var rail, panel, toggle, recDot, recTime, btnRec, btnPause;
   var layoutChange;
+  var renderChange;
   var pageDirty = false;
 
   var PAGE_PRESETS = {
@@ -108,11 +109,16 @@
     return Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60);
   }
 
+  function changed() {
+    if (renderChange) renderChange();
+  }
+
   function bindRange(id, key, onChange) {
     var el = $(id);
-    if (!el) return;
     var out = el.parentNode.querySelector('output');
     var fmt = FORMAT[id] || function (v) { return v.toFixed(2); };
+    el.defaultValue = state[key];
+    el.value = state[key];
 
     function sync() {
       var v = parseFloat(el.value);
@@ -120,6 +126,7 @@
       if (out) out.textContent = fmt(v);
       el.setAttribute('aria-valuetext', fmt(v));
       if (onChange) onChange();
+      changed();
     }
 
     el.addEventListener('input', sync);
@@ -185,12 +192,14 @@
     var diffuse = state.finish === 'diffuse';
     $('glowControls').hidden = diffuse;
     $('inkControls').hidden = !diffuse;
+    changed();
   }
 
   function syncTextBlur() {
     state.sharpType = $('sharpType').checked;
     $('textBlur').disabled = state.sharpType;
     $('textBlur').closest('.slider').classList.toggle('is-disabled', state.sharpType);
+    changed();
   }
 
   function setRange(id, value) {
@@ -200,16 +209,18 @@
   }
 
   function applyFace(key) {
-    var face = RTG.Type.setFace(key);
+    RTG.Type.setFace(key);
     state.font = key;
-
-    if (document.fonts && document.fonts.load) {
-      document.fonts.load(face.weight + ' 48px ' + face.family.split(',')[0]).then(function () {
-        RTG.Type.revision++;
-      }, function (error) {
-        console.warn('The selected web font could not load; using its fallback font.', error);
-      });
-    }
+    changed();
+    $('fontStatus').textContent = 'Loading typeface...';
+    RTG.Type.loadFace(key).then(function () {
+      if (state.font === key) $('fontStatus').textContent = '';
+      changed();
+    }, function (error) {
+      if (state.font === key) $('fontStatus').textContent = 'Web font unavailable. Using the fallback typeface.';
+      console.warn('The selected web font could not load.', error);
+      changed();
+    });
   }
 
   function setPanel(open) {
@@ -248,6 +259,7 @@
       btnRec = $('btnRec');
       btnPause = $('btnPause');
       layoutChange = hooks.onLayoutChange;
+      renderChange = hooks.onChange;
       initPageSize();
 
       var camChange = hooks.onCameraChange;
@@ -274,6 +286,8 @@
       bindRange('grain', 'grain');
 
       Object.keys(UI_COLORS).forEach(function (id) {
+        $(id).defaultValue = UI_COLORS[id].value;
+        $(id).value = UI_COLORS[id].value;
         $(id).addEventListener('input', function () { syncUiColor(id); });
         syncUiColor(id);
       });
@@ -288,23 +302,33 @@
       });
 
       $('finish').addEventListener('change', syncFinish);
+      $('finish').value = state.finish;
       syncFinish();
       $('sharpType').addEventListener('change', syncTextBlur);
+      $('sharpType').checked = state.sharpType;
       syncTextBlur();
 
       var fontSel = $('fontFace');
       fontSel.addEventListener('change', function () { applyFace(fontSel.value); });
+      fontSel.value = state.font;
       applyFace(fontSel.value);
 
       var words = $('words');
-      function syncWords() { state.words = parseWords(words.value); }
+      words.defaultValue = state.words.join('\n');
+      words.value = words.defaultValue;
+      function syncWords() {
+        state.words = parseWords(words.value);
+        changed();
+      }
       words.addEventListener('input', syncWords);
       syncWords();
 
       var bg = $('bgColor');
       var ink = $('inkColor');
-      bg.addEventListener('input', function () { state.bg = bg.value; applyColours(); });
-      ink.addEventListener('input', function () { state.ink = ink.value; });
+      bg.defaultValue = bg.value = state.bg;
+      ink.defaultValue = ink.value = state.ink;
+      bg.addEventListener('input', function () { state.bg = bg.value; applyColours(); changed(); });
+      ink.addEventListener('input', function () { state.ink = ink.value; changed(); });
 
       $('preset').addEventListener('change', function (e) {
         var p = PRESETS[e.target.value];
@@ -332,6 +356,7 @@
           setRange('grain', p.grain);
         }
         applyColours();
+        changed();
       });
 
       $('btnDrop').addEventListener('click', hooks.onDrop);
@@ -344,6 +369,7 @@
         btnPause.textContent = state.paused ? 'Play' : 'Pause';
         btnPause.classList.toggle('active', state.paused);
         btnPause.setAttribute('aria-pressed', String(state.paused));
+        changed();
       });
 
       toggle.addEventListener('click', function () { setPanel(panel.hidden); });
@@ -392,7 +418,8 @@
     tick: function () {
       if (RTG.Exporter.isRecording()) {
         var e = Math.floor(RTG.Exporter.elapsed());
-        recTime.textContent = formatClock(e);
+        var time = formatClock(e);
+        if (recTime.textContent !== time) recTime.textContent = time;
       }
     }
   };
