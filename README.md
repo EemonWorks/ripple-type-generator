@@ -21,8 +21,8 @@ python3 -m http.server 8777
 
 ## Controls
 
-The interface is styled as a pink-and-lavender Windows 98 window, with beveled
-controls and a clearly framed canvas in the center. Click inside that canvas to place
+The interface is styled as a pink-and-plum Windows 98 window, with layered
+3D-beveled controls and a clearly framed canvas in the center. Click inside that canvas to place
 a drop. Controls live in a collapsible rail on the left. Use its arrow or `H` to
 collapse/expand it; `Escape` closes it. The narrow spine stays visible, and your settings are preserved.
 On small screens the rail starts collapsed.
@@ -35,6 +35,13 @@ in the bottom status bar beside the page size.
 
 The interface uses a bundled bitmap-style MS Sans Serif font rather than relying on
 system fonts. Select **Windows bitmap** under Typography to use it for the artwork too.
+Regular and bold 11px interface type keeps the bitmap grid consistent; the welcome
+headline uses the same face at 22px.
+
+The **Welcome** window opens on launch with a short introduction, recording guidance
+and credits. Dismiss it with **Let's go**, its close button, or Escape. Reopen it from
+the Welcome menu. Background keyboard shortcuts are ignored while it is open; the
+Welcome menu is disabled during recording. The popup is never included in exports.
 
 | Key | Action |
 |---|---|
@@ -77,10 +84,13 @@ stays stationary rather than flickering over the moving shapes.
 **Export** — `PNG` saves a still. `Record` captures WebM (or MP4 in browsers that only
 support it) via `MediaRecorder`.
 
-**UI palette (temporary)** — change the window, title bar, text, highlights, edges,
-and desktop colors while choosing the final interface palette. The defaults use
-the reference's pink `#f8d7e2` and lavender `#cdc4fd`. Restore reference colors resets
-only the interface, not the water, ink, typography, or animation.
+**UI palette (temporary)** — change the window, title gradient endpoints, title text,
+body text, and desktop colors while choosing the final palette. The defaults use
+the supplied SVG's pink `#ffccf1` and plum-to-pink `#800064` / `#ffc7f0` title bar.
+**Light edge**, **Inner light**, **Inner shadow**, and **Dark edge** independently
+control the four-tone raised/recessed borders used by buttons, sliders, panels,
+the recording frame and the welcome window. Restore reference colors resets only
+the interface, not the water, ink, typography, or animation.
 
 ## Recording area
 
@@ -239,6 +249,8 @@ colour, stationary grain, line weight, sharp text in both finishes, controls,
 high-DPI output, resizing, click-to-drop, mixed-case words, rail accessibility,
 independent text blur/glow, kerning, UI palette isolation, fixed recording dimensions
 and PNG round trips, including custom page sizes and the four aspect presets.
+Welcome focus/dismissal, background shortcut isolation, recording restrictions
+and the independent bevel colors are covered as well.
 The page also displays example renders for visual comparison.
 
 ## Layout

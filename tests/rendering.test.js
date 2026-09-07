@@ -82,6 +82,58 @@
       input.dispatchEvent(new Event('change'));
     }
 
+    test('Welcome opens with a labelled dialog and a focused start button', function () {
+      var welcome = doc.getElementById('welcomeDialog');
+      assert(welcome.open, 'Welcome did not open on launch');
+      assert(welcome.getAttribute('aria-labelledby') === 'welcomeTitle', 'Welcome title is not labelled');
+      assert(welcome.contains(doc.activeElement), 'Keyboard focus is outside the modal');
+      assert(doc.getElementById('welcomeDescription').textContent.indexOf('canvas') >= 0, 'Welcome is missing usage guidance');
+      assert(welcome.querySelector('.welcome-byline').textContent.indexOf('lou') >= 0, 'Welcome credits are missing');
+    });
+    doc.getElementById('welcomeStart').click();
+
+    test('Welcome can reopen, dismiss and block background shortcuts without changing settings', function () {
+      var welcome = doc.getElementById('welcomeDialog');
+      var opener = doc.getElementById('btnWelcome');
+      assert(!welcome.open, 'Start button did not dismiss welcome');
+      var words = R.Controls.state.words.join('|');
+      var paused = R.Controls.state.paused;
+      var railHidden = doc.getElementById('panel').hidden;
+      var drops = R.Droplets.list.length;
+      opener.focus();
+      opener.click();
+      assert(welcome.open, 'Welcome menu did not reopen the dialog');
+      ['h', 'd', 'c', ' '].forEach(function (key) {
+        doc.dispatchEvent(new KeyboardEvent('keydown', { key: key, code: key === ' ' ? 'Space' : '', bubbles: true }));
+      });
+      assert(R.Controls.state.paused === paused && R.Droplets.list.length === drops &&
+        doc.getElementById('panel').hidden === railHidden, 'A modal shortcut changed the background app');
+      welcome.dispatchEvent(new Event('cancel', { cancelable: true }));
+      assert(!welcome.open, 'Escape/cancel did not dismiss welcome');
+      assert(doc.activeElement === opener, 'Focus did not return to the welcome menu');
+      opener.click();
+      doc.getElementById('welcomeClose').click();
+      assert(!welcome.open && R.Controls.state.words.join('|') === words, 'Close reset the words or left the modal open');
+    });
+    if (doc.getElementById('welcomeDialog').open) doc.getElementById('welcomeDialog').close();
+
+    test('Welcome stays available when the control rail is collapsed', function () {
+      var dialog = doc.getElementById('welcomeDialog');
+      var panel = doc.getElementById('panel');
+      var toggle = doc.getElementById('panelToggle');
+      var wasOpen = !panel.hidden;
+      if (wasOpen) toggle.click();
+      try {
+        doc.getElementById('btnWelcome').click();
+        assert(dialog.open && !dialog.closest('[hidden]'), 'Welcome is inside hidden controls');
+        assert(!dialog.closest('#controlRail'), 'Welcome is coupled to the rail layout');
+        assert(dialog.getBoundingClientRect().width > 0, 'Collapsed rail hides welcome');
+      } finally {
+        dialog.close();
+        if (wasOpen) toggle.click();
+      }
+    });
+
     var ink = '#2454f5';
     var source = canvas(256, 256);
     var sourceCtx = source.getContext('2d');
@@ -226,8 +278,30 @@
       assert(doc.documentElement.style.getPropertyValue('--ui-face') === '#b8e3dc', 'Window color did not change');
       assert(R.Controls.state.bg === bg && R.Controls.state.ink === inkColor, 'UI color changed the artwork palette');
       doc.getElementById('btnUiReset').click();
-      assert(input.value === '#f8d7e2' && doc.getElementById('uiTitle').value === '#cdc4fd',
+      assert(input.value === '#ffccf1' && doc.getElementById('uiTitle').value === '#800064',
         'Reference colors were not restored');
+    });
+
+    test('Each edge and title color has an independent, resettable UI control', function () {
+      var colors = {
+        uiHighlight: '--ui-highlight', uiEdgeLight: '--ui-edge-light',
+        uiShadow: '--ui-shadow', uiEdgeDark: '--ui-edge-dark',
+        uiTitleEnd: '--ui-title-end', uiTitleText: '--ui-title-text'
+      };
+      var artwork = R.Controls.state.bg + '|' + R.Controls.state.ink;
+      Object.keys(colors).forEach(function (id, i) {
+        var input = doc.getElementById(id);
+        var value = '#12345' + i;
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        assert(R.Controls.state[id] === value && doc.documentElement.style.getPropertyValue(colors[id]) === value,
+          'Unwired UI color: ' + id);
+      });
+      assert(artwork === R.Controls.state.bg + '|' + R.Controls.state.ink, 'Edge colors changed the artwork');
+      doc.getElementById('btnUiReset').click();
+      Object.keys(colors).forEach(function (id) {
+        assert(doc.getElementById(id).value === doc.getElementById(id).defaultValue, 'Color did not reset: ' + id);
+      });
     });
 
     test('Canvas backing size follows the framed area and existing drops survive resizing', function () {
@@ -280,6 +354,9 @@
           Math.abs(R.Droplets.list[0].ay - worldH * 0.75) < 0.01, 'Click missed the fitted recording area');
         assert(doc.getElementById('appWindow').classList.contains('is-recording'), 'Recording frame is not marked');
         assert(doc.getElementById('pageSizeControls').disabled, 'Page size is editable during recording');
+        assert(doc.getElementById('btnWelcome').disabled, 'Welcome can obscure recording controls');
+        doc.getElementById('btnWelcome').click();
+        assert(!doc.getElementById('welcomeDialog').open, 'Welcome opened during recording');
       } finally {
         R.Exporter.isRecording = isRecording;
         R.Controls.setRecording(false);
@@ -437,6 +514,17 @@
       input.dispatchEvent(new Event('input'));
       assert(identical(before, pixels(render({ grain: 0.16 }))), 'Window tint leaked into the canvas');
       doc.getElementById('btnUiReset').click();
+    });
+
+    test('The welcome overlay is not part of the exported canvas', function () {
+      var before = pixels(render({ grain: 0.16 }));
+      doc.getElementById('btnWelcome').click();
+      try {
+        assert(doc.getElementById('welcomeDialog').open, 'Welcome did not open');
+        assert(identical(before, pixels(render({ grain: 0.16 }))), 'Welcome changed canvas pixels');
+      } finally {
+        doc.getElementById('welcomeDialog').close();
+      }
     });
 
     test('Line weight changes ring coverage in both finishes', function () {

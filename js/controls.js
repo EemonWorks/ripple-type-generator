@@ -47,11 +47,15 @@
   };
 
   var UI_COLORS = {
-    uiFace: { value: '#f8d7e2', css: '--ui-face' },
-    uiTitle: { value: '#cdc4fd', css: '--ui-title' },
-    uiText: { value: '#4b233d', css: '--ui-text' },
-    uiHighlight: { value: '#fff4f9', css: '--ui-highlight' },
-    uiShadow: { value: '#a75c85', css: '--ui-shadow' },
+    uiFace: { value: '#ffccf1', css: '--ui-face' },
+    uiTitle: { value: '#800064', css: '--ui-title' },
+    uiTitleEnd: { value: '#ffc7f0', css: '--ui-title-end' },
+    uiTitleText: { value: '#ffffff', css: '--ui-title-text' },
+    uiText: { value: '#35112d', css: '--ui-text' },
+    uiHighlight: { value: '#ffffff', css: '--ui-highlight' },
+    uiEdgeLight: { value: '#fff0fa', css: '--ui-edge-light' },
+    uiShadow: { value: '#d69abc', css: '--ui-shadow' },
+    uiEdgeDark: { value: '#800064', css: '--ui-edge-dark' },
     uiDesktop: { value: '#edddea', css: '--ui-desktop' }
   };
 
@@ -214,6 +218,19 @@
     if (layoutChange) layoutChange();
   }
 
+  function initWelcome() {
+    var dialog = $('welcomeDialog');
+    $('btnWelcome').addEventListener('click', function () {
+      if (!dialog.open) dialog.showModal();
+    });
+    $('welcomeClose').addEventListener('click', function () { dialog.close(); });
+    dialog.addEventListener('cancel', function (e) {
+      e.preventDefault();
+      dialog.close();
+    });
+    dialog.showModal();
+  }
+
   var Controls = {
     state: state,
 
@@ -317,6 +334,7 @@
       setPanel(!window.matchMedia('(max-width: 600px)').matches);
 
       document.addEventListener('keydown', function (e) {
+        if ($('welcomeDialog').open) return;
         if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
         if (e.key === 'Escape') {
           if (!panel.hidden) { e.preventDefault(); setPanel(false); }
@@ -331,6 +349,7 @@
       });
 
       applyColours();
+      initWelcome();
     },
 
     setCanvasSize: function (width, height) {
@@ -350,6 +369,7 @@
       $('recordingStatus').textContent = on ? 'Recording this canvas' : 'Recording area';
       $('captureStatus').textContent = on ? 'Recording' : 'Ready';
       $('pageSizeControls').disabled = on;
+      $('btnWelcome').disabled = on;
     },
 
     /** Refreshes the recording read-out once per frame. */

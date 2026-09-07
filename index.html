@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 
 <link rel="preload" href="assets/fonts/ms-sans-serif/regular/font.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="styles.css?v=win98-2">
+<link rel="stylesheet" href="styles.css?v=welcome-1">
 </head>
 <body>
 
@@ -24,6 +24,7 @@
   <nav class="menu-bar" aria-label="Quick actions">
     <button type="button" data-command="panelToggle">Controls</button>
     <button type="button" data-command="btnUiReset">Reset UI colors</button>
+    <button type="button" id="btnWelcome">Welcome</button>
   </nav>
   <div class="app-workspace">
 
@@ -156,13 +157,18 @@ ERUPT</textarea>
         <div class="group-body">
           <p class="hint palette-hint">Try colors for the interface. These never change the artwork or exports.</p>
           <div class="ui-palette">
-            <label class="swatch">Window <input type="color" id="uiFace" value="#f8d7e2"></label>
-            <label class="swatch">Title bar <input type="color" id="uiTitle" value="#cdc4fd"></label>
-            <label class="swatch">Text <input type="color" id="uiText" value="#4b233d"></label>
-            <label class="swatch">Highlights <input type="color" id="uiHighlight" value="#fff4f9"></label>
-            <label class="swatch">Edges <input type="color" id="uiShadow" value="#a75c85"></label>
+            <label class="swatch">Window <input type="color" id="uiFace" value="#ffccf1"></label>
+            <label class="swatch">Title start <input type="color" id="uiTitle" value="#800064"></label>
+            <label class="swatch">Title end <input type="color" id="uiTitleEnd" value="#ffc7f0"></label>
+            <label class="swatch">Title text <input type="color" id="uiTitleText" value="#ffffff"></label>
+            <label class="swatch">Text <input type="color" id="uiText" value="#35112d"></label>
+            <label class="swatch">Light edge <input type="color" id="uiHighlight" value="#ffffff"></label>
+            <label class="swatch">Inner light <input type="color" id="uiEdgeLight" value="#fff0fa"></label>
+            <label class="swatch">Inner shadow <input type="color" id="uiShadow" value="#d69abc"></label>
+            <label class="swatch">Dark edge <input type="color" id="uiEdgeDark" value="#800064"></label>
             <label class="swatch">Desktop <input type="color" id="uiDesktop" value="#edddea"></label>
           </div>
+          <p class="hint">The four edge colors define the raised and recessed 3D borders throughout the UI.</p>
           <button type="button" id="btnUiReset" class="theme-reset">Restore reference colors</button>
         </div>
       </details>
@@ -221,6 +227,35 @@ ERUPT</textarea>
   </footer>
 </div>
 
+<dialog id="welcomeDialog" class="welcome-dialog" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
+  <header class="title-bar welcome-title-bar">
+    <span>Welcome</span>
+    <button type="button" id="welcomeClose" class="window-close" aria-label="Close welcome">
+      <svg viewBox="0 0 12 12" aria-hidden="true" shape-rendering="crispEdges"><path d="m2 2 8 8m0-8-8 8"/></svg>
+    </button>
+  </header>
+  <div class="welcome-body">
+    <div class="welcome-intro">
+      <svg class="welcome-icon" viewBox="0 0 32 40" aria-hidden="true" shape-rendering="crispEdges">
+        <path d="M16 2h4v6h4v6h4v6h4v12h-4v4H8v-4H4V20h4v-6h4V8h4z" class="icon-shadow"/>
+        <path d="M12 0h4v6h4v6h4v6h4v12h-4v4H4v-4H0V18h4v-6h4V6h4z" class="icon-ink"/>
+        <path d="M8 18h4v10H8z" class="icon-light"/>
+      </svg>
+      <div>
+        <p class="welcome-eyebrow">Welcome to</p>
+        <h2 id="welcomeTitle">Ripple Type Generator</h2>
+        <p class="welcome-tagline">Words in motion. A little water, a little type.</p>
+      </div>
+    </div>
+    <p id="welcomeDescription">Add your words, click inside the canvas to drop them, and shape the ripples with ink, blur and glow.</p>
+    <p class="welcome-note">Choose your page size in the bottom bar. Only the framed canvas is saved or recorded.</p>
+    <form method="dialog" class="welcome-actions">
+      <button id="welcomeStart" value="start" autofocus>Let's go</button>
+    </form>
+    <p class="welcome-byline">A kinetic type experiment inspired by Space Type Generator.<br>Interface type by lou, via 98.css.</p>
+  </div>
+</dialog>
+
 <script src="js/camera.js?v=win98-2"></script>
 <script src="js/grain.js?v=win98-2"></script>
 <script src="js/field.js?v=win98-2"></script>
@@ -229,7 +264,7 @@ ERUPT</textarea>
 <script src="js/blur.js?v=win98-2"></script>
 <script src="js/render.js?v=win98-2"></script>
 <script src="js/export.js?v=win98-2"></script>
-<script src="js/controls.js?v=win98-2"></script>
+<script src="js/controls.js?v=welcome-1"></script>
 <script src="js/main.js?v=win98-2"></script>
 </body>
 </html>
