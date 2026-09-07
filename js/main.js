@@ -5,6 +5,8 @@
   'use strict';
 
   var canvas = document.getElementById('stage');
+  var viewport = document.getElementById('canvasViewport');
+  var frame = document.getElementById('recordingFrame');
   var ctx = canvas.getContext('2d');
   var state = RTG.Controls.state;
 
@@ -12,18 +14,53 @@
   var clock = 0, last = 0, nextDrop = 0.3, wordIndex = 0;
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = Math.max(1, window.innerWidth);
-    H = Math.max(1, window.innerHeight);
+    var chrome = getComputedStyle(frame);
+    var insetX = parseFloat(chrome.paddingLeft) + parseFloat(chrome.paddingRight) +
+      parseFloat(chrome.borderLeftWidth) + parseFloat(chrome.borderRightWidth);
+    var insetY = parseFloat(chrome.paddingTop) + parseFloat(chrome.paddingBottom) +
+      parseFloat(chrome.borderTopWidth) + parseFloat(chrome.borderBottomWidth);
+    var availableW = Math.max(1, Math.floor(viewport.clientWidth - insetX));
+    var availableH = Math.max(1, Math.floor(viewport.clientHeight - insetY));
+    var fixedSize = state.pageMode === 'fixed';
+    var nextW = fixedSize ? state.pageWidth : availableW;
+    var nextH = fixedSize ? state.pageHeight : availableH;
+    var nextDpr = fixedSize ? 1 : Math.min(window.devicePixelRatio || 1, 2);
 
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // A recording keeps a fixed backing resolution. Layout changes only fit that
+    // rectangle on screen, so the border always describes the pixels being captured.
+    if (!RTG.Exporter.isRecording() &&
+        (nextW !== W || nextH !== H || nextDpr !== dpr)) {
+      var oldW = W, oldH = H;
+      W = nextW;
+      H = nextH;
+      dpr = nextDpr;
+      if (oldW && oldH) {
+        var sx = W / oldW, sy = H / oldH;
+        RTG.Ripples.list.forEach(function (source) {
+          source.ax *= sx;
+          source.ay *= sy;
+          source.baseFsPx *= sy;
+          source.drawnRx *= sy;
+        });
+        RTG.Droplets.list.forEach(function (drop) {
+          drop.ax *= sx;
+          drop.ay *= sy;
+          drop.y0 *= sy;
+          drop.r *= sy;
+        });
+      }
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      RTG.Grain.invalidate();
+      configureCamera();
+    }
 
-    RTG.Grain.invalidate();
-    configureCamera();
+    var fit = Math.min(availableW / W, availableH / H);
+    canvas.style.width = (W * fit) + 'px';
+    canvas.style.height = (H * fit) + 'px';
+    RTG.Controls.setCanvasSize(canvas.width, canvas.height);
+    paint();
   }
 
   /**
@@ -34,6 +71,10 @@
   function configureCamera() {
     var perspective = 0.02 + 0.55 * Math.pow(1 - state.bow, 2.5);
     RTG.Camera.configure(W, H, state.tilt, perspective);
+    RTG.Ripples.list.forEach(function (source) {
+      source.u = source.ax;
+      source.v = RTG.Camera.toMapY(source.ay);
+    });
   }
 
   function crowded(ax, ay) {
@@ -135,12 +176,17 @@
       RTG.Ripples.update(clock);
     }
 
-    RTG.Render.frame(ctx, W, H, clock, state, canvas.width, canvas.height);
+    paint();
     RTG.Controls.tick();
+  }
+
+  function paint() {
+    RTG.Render.frame(ctx, W, H, clock, state, canvas.width, canvas.height);
   }
 
   RTG.Controls.init({
     onCameraChange: configureCamera,
+    onLayoutChange: resize,
     onDrop: dropOne,
     onClear: function () {
       RTG.Ripples.clear();
@@ -148,19 +194,26 @@
     },
     onPng: function () { RTG.Exporter.png(canvas); },
     onRecord: function () {
-      var on = RTG.Exporter.toggle(canvas, function () { RTG.Controls.setRecording(false); });
+      var on = RTG.Exporter.toggle(canvas, function () {
+        RTG.Controls.setRecording(false);
+        resize();
+      });
       RTG.Controls.setRecording(on);
+      resize();
     }
   });
 
   canvas.addEventListener('pointerdown', function (e) {
     var rect = canvas.getBoundingClientRect();
-    RTG.Droplets.spawn(e.clientX - rect.left, e.clientY - rect.top, nextWord(), clock, state);
+    RTG.Droplets.spawn((e.clientX - rect.left) * W / rect.width,
+      (e.clientY - rect.top) * H / rect.height, nextWord(), clock, state);
   });
 
   window.addEventListener('resize', resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(viewport);
 
   resize();
   seed();
+  paint();
   requestAnimationFrame(loop);
 })(window.RTG = window.RTG || {});

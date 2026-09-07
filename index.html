@@ -10,11 +10,22 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="styles.css">
+<link rel="preload" href="assets/fonts/ms-sans-serif/regular/font.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css?v=win98-2">
 </head>
 <body>
 
-<canvas id="stage" aria-label="Animated word ripples. Click to place a drop."></canvas>
+<div id="appWindow" class="app-window">
+  <header class="title-bar">
+    <span class="app-icon" aria-hidden="true"></span>
+    <h1>Ripple Type Generator</h1>
+    <span class="document-name">Untitled</span>
+  </header>
+  <nav class="menu-bar" aria-label="Quick actions">
+    <button type="button" data-command="panelToggle">Controls</button>
+    <button type="button" data-command="btnUiReset">Reset UI colors</button>
+  </nav>
+  <div class="app-workspace">
 
 <aside id="controlRail" aria-label="Generator controls">
   <div class="rail-spine">
@@ -27,7 +38,7 @@
 
   <div id="panel">
     <header class="panel-head">
-      <h1>Ripple type</h1>
+      <h2>Control panel</h2>
       <p>Words in motion.</p>
     </header>
 
@@ -103,6 +114,7 @@ ERUPT</textarea>
             <label for="fontFace">Typeface</label>
             <select id="fontFace">
               <option value="inter">Inter</option>
+              <option value="win98">Windows bitmap</option>
               <option value="poppins">Poppins</option>
               <option value="grotesk">Space Grotesk</option>
               <option value="bebas">Bebas Neue (all caps)</option>
@@ -113,8 +125,11 @@ ERUPT</textarea>
           </div>
           <div class="sliders">
             <div class="slider"><label for="typeSize">Type size</label><input type="range" id="typeSize" min="0.4" max="2.2" step="0.02" value="1"><output for="typeSize"></output></div>
+            <div class="slider"><label for="kerning">Kerning</label><input type="range" id="kerning" min="-0.08" max="0.35" step="0.01" value="0" aria-describedby="kerningHint"><output for="kerning"></output></div>
             <div class="slider"><label for="typeTilt">Lay flat</label><input type="range" id="typeTilt" min="0" max="1" step="0.01" value="0"><output for="typeTilt"></output></div>
+            <div class="slider"><label for="textGlow">Text glow</label><input type="range" id="textGlow" min="0" max="1.2" step="0.01" value="0"><output for="textGlow"></output></div>
           </div>
+          <p class="hint" id="kerningHint">Kerning adjusts letter spacing in em. Text glow is independent of ring glow.</p>
           <label class="check"><input type="checkbox" id="sharpType" checked>Keep words sharp</label>
           <div class="slider text-blur-control">
             <label for="textBlur">Text blur</label>
@@ -135,6 +150,22 @@ ERUPT</textarea>
           <div class="slider"><label for="bow">Perspective bow</label><input type="range" id="bow" min="0" max="1" step="0.01" value="0.72"><output for="bow"></output></div>
         </div>
       </details>
+
+      <details class="control-group" id="uiPaletteGroup">
+        <summary>UI palette (temporary)</summary>
+        <div class="group-body">
+          <p class="hint palette-hint">Try colors for the interface. These never change the artwork or exports.</p>
+          <div class="ui-palette">
+            <label class="swatch">Window <input type="color" id="uiFace" value="#f8d7e2"></label>
+            <label class="swatch">Title bar <input type="color" id="uiTitle" value="#cdc4fd"></label>
+            <label class="swatch">Text <input type="color" id="uiText" value="#4b233d"></label>
+            <label class="swatch">Highlights <input type="color" id="uiHighlight" value="#fff4f9"></label>
+            <label class="swatch">Edges <input type="color" id="uiShadow" value="#a75c85"></label>
+            <label class="swatch">Desktop <input type="color" id="uiDesktop" value="#edddea"></label>
+          </div>
+          <button type="button" id="btnUiReset" class="theme-reset">Restore reference colors</button>
+        </div>
+      </details>
     </div>
 
     <footer class="rail-footer">
@@ -143,26 +174,62 @@ ERUPT</textarea>
         <button type="button" id="btnPause" aria-pressed="false" title="Pause animation (Space)">Pause</button>
         <button type="button" id="btnClear" title="Clear the water (C)">Clear</button>
       </div>
-      <div class="buttons export-buttons">
-        <button type="button" id="btnPng">Save PNG</button>
-        <button type="button" id="btnRec" aria-pressed="false">Record video</button>
-      </div>
       <p class="hint">Click the water to place a drop.</p>
     </footer>
   </div>
 </aside>
 
-<div id="recDot" hidden><span></span>REC <em id="recTime">0:00</em></div>
+    <main id="stageWorkspace" aria-label="Recording workspace">
+      <div class="stage-heading">
+        <span id="recordingStatus">Recording area</span>
+        <div id="recDot" hidden><span></span>REC <em id="recTime">0:00</em></div>
+        <span>Canvas only &middot; UI is not exported</span>
+      </div>
+      <div id="canvasViewport">
+        <div id="recordingFrame">
+          <canvas id="stage" aria-label="Animated word ripples. Click inside this recording area to place a drop."></canvas>
+        </div>
+      </div>
+    </main>
+  </div>
+  <footer class="status-bar">
+    <div class="buttons status-actions">
+      <button type="button" id="btnPng">Save image</button>
+      <button type="button" id="btnRec" aria-pressed="false">Record video</button>
+    </div>
+    <form id="pageSizeForm" class="page-size-form" aria-label="Canvas size">
+      <fieldset id="pageSizeControls">
+        <legend class="sr-only">Canvas dimensions in pixels</legend>
+        <label for="pageRatio">Page</label>
+        <select id="pageRatio">
+          <option value="fit">Fit window</option>
+          <option value="16:9">16:9</option>
+          <option value="9:16">9:16</option>
+          <option value="4:4">4:4 (square)</option>
+          <option value="18:9">18:9</option>
+          <option value="custom">Custom</option>
+        </select>
+        <label for="pageWidth">W</label>
+        <input id="pageWidth" type="number" min="64" max="4096" step="1" value="1920" required aria-label="Canvas width in pixels" title="Canvas width: 64 to 4096 px">
+        <label for="pageHeight">H</label>
+        <input id="pageHeight" type="number" min="64" max="4096" step="1" value="1080" required aria-label="Canvas height in pixels" title="Canvas height: 64 to 4096 px">
+        <button type="submit">Apply</button>
+      </fieldset>
+    </form>
+    <output id="canvasDimensions" aria-label="Export resolution"></output>
+    <span id="captureStatus">Ready</span>
+  </footer>
+</div>
 
-<script src="js/camera.js"></script>
-<script src="js/grain.js"></script>
-<script src="js/field.js"></script>
-<script src="js/ripple.js"></script>
-<script src="js/droplet.js"></script>
-<script src="js/blur.js"></script>
-<script src="js/render.js"></script>
-<script src="js/export.js"></script>
-<script src="js/controls.js"></script>
-<script src="js/main.js"></script>
+<script src="js/camera.js?v=win98-2"></script>
+<script src="js/grain.js?v=win98-2"></script>
+<script src="js/field.js?v=win98-2"></script>
+<script src="js/ripple.js?v=win98-2"></script>
+<script src="js/droplet.js?v=win98-2"></script>
+<script src="js/blur.js?v=win98-2"></script>
+<script src="js/render.js?v=win98-2"></script>
+<script src="js/export.js?v=win98-2"></script>
+<script src="js/controls.js?v=win98-2"></script>
+<script src="js/main.js?v=win98-2"></script>
 </body>
 </html>

@@ -21,15 +21,20 @@ python3 -m http.server 8777
 
 ## Controls
 
-Click anywhere on the water to place a drop by hand. Controls live in a collapsible
-rail attached to the left edge. Use its arrow or `H` to collapse/expand it; `Escape`
-closes it. The narrow spine stays visible, and your settings are preserved.
+The interface is styled as a pink-and-lavender Windows 98 window, with beveled
+controls and a clearly framed canvas in the center. Click inside that canvas to place
+a drop. Controls live in a collapsible rail on the left. Use its arrow or `H` to
+collapse/expand it; `Escape` closes it. The narrow spine stays visible, and your settings are preserved.
 On small screens the rail starts collapsed.
 
 Words, finish/colour, rings, typography, and motion/camera are separate collapsible
-sections. Each slider has its label and value above a monochrome segmented track.
-The sliders still support dragging, touch, and keyboard arrows. Drop, pause, clear,
-and export actions stay at the bottom while settings scroll.
+sections. Labels and values sit above classic recessed slider tracks, with raised
+handles and tick marks. Sliders support dragging, touch, and keyboard arrows.
+Drop, pause and clear stay below the settings; Save image and Record video live
+in the bottom status bar beside the page size.
+
+The interface uses a bundled bitmap-style MS Sans Serif font rather than relying on
+system fonts. Select **Windows bitmap** under Typography to use it for the artwork too.
 
 | Key | Action |
 |---|---|
@@ -52,6 +57,10 @@ the font size or droplet diameter.
 the plane of the water. **Keep words sharp** overrides text blur. Turn it off to enable
 the separate **Text blur** slider, which works independently of ring blur in both
 finishes. Zero gives crisp text; higher values soften only the words.
+**Text glow** controls a separate halo in both finishes, even when Keep words sharp
+is enabled. **Kerning** adjusts letter spacing in em relative to the selected font's
+default tracking. It updates existing words and their capsule measurements without
+restarting the ripples.
 
 **Camera** — tilt and bow.
 
@@ -67,6 +76,29 @@ stays stationary rather than flickering over the moving shapes.
 
 **Export** — `PNG` saves a still. `Record` captures WebM (or MP4 in browsers that only
 support it) via `MediaRecorder`.
+
+**UI palette (temporary)** — change the window, title bar, text, highlights, edges,
+and desktop colors while choosing the final interface palette. The defaults use
+the reference's pink `#f8d7e2` and lavender `#cdc4fd`. Restore reference colors resets
+only the interface, not the water, ink, typography, or animation.
+
+## Recording area
+
+Only the canvas inside the beveled center frame is captured. The title bar, control
+rail, border, and recording indicators are not included in PNGs or videos. The status
+bar shows the actual export resolution in pixels.
+
+Choose **Fit window** to size the canvas to the workspace, or pick a page preset:
+**16:9** (1920 x 1080), **9:16** (1080 x 1920), **4:4** (1080 x 1080), or **18:9**
+(2160 x 1080). Edit W and H and press **Apply** for a custom size, from 64 to 4096
+pixels on each axis. These are exact export dimensions, independent of screen DPI.
+The preview fits the available space without stretching.
+
+Existing drops and ripples keep their relative positions when the page changes size.
+During recording, the size controls are disabled,
+the backing resolution stays fixed and the preview fits proportionally inside the
+workspace. Clicks are mapped back to that recording rectangle so drops still land
+where you click.
 
 ## How it works
 
@@ -177,8 +209,9 @@ line weight scale with the artwork, including high-DPI displays and exports.
 
 Grain is applied after compositing, so it remains fine instead of being blurred
 with the rings. It is stationary in the ink finish and whenever animation is paused.
-Text always has a separate rendering pass so its blur amount is independent of the
-ring finish. **Keep words sharp** bypasses the text-blur pass entirely.
+Text always has a separate rendering pass so its blur and glow are independent of
+the ring finish. **Keep words sharp** bypasses text blur, while its optional glow
+remains adjustable. Word measurements and glyph advances use the same kerning value.
 
 ### Other details
 
@@ -204,7 +237,8 @@ With the static server running, open `http://127.0.0.1:8777/tests/rendering.html
 The dependency-free browser checks exercise real canvas pixels, blur falloff and
 colour, stationary grain, line weight, sharp text in both finishes, controls,
 high-DPI output, resizing, click-to-drop, mixed-case words, rail accessibility,
-independent text blur and PNG round trips.
+independent text blur/glow, kerning, UI palette isolation, fixed recording dimensions
+and PNG round trips, including custom page sizes and the four aspect presets.
 The page also displays example renders for visual comparison.
 
 ## Layout
@@ -224,3 +258,7 @@ js/export.js     PNG and WebM capture
 js/main.js       boot, resize, scheduling, animation loop
 tests/rendering.html   browser rendering checks and visual comparisons
 ```
+
+The bundled UI fonts are MS Sans Serif and MS Sans Serif Bold by lou, provided
+under CC BY-SA 3.0, with WOFF2 conversions from 98.css. Original fonts, licenses,
+readmes and source attribution are in `assets/fonts/ms-sans-serif/`.

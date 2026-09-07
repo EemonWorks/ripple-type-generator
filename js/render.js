@@ -175,6 +175,7 @@
   var softLayer = RTG.Blur.create();
   var inkLayer = RTG.Blur.create();
   var textLayer = RTG.Blur.create();
+  var textGlowLayers = [RTG.Blur.create(), RTG.Blur.create(), RTG.Blur.create()];
   var words = [];
 
   function prepareSurface(surface, W, H, devW, devH, dpr) {
@@ -196,7 +197,8 @@
     return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255;
   }
 
-  function drawGlow(ctx, source, devW, devH, amount, p) {
+  function drawGlow(ctx, source, devW, devH, amount, p, layers) {
+    layers = layers || glowLayers;
     var octaves = [
       { radius: devH * 0.008, weight: 1 },
       { radius: devH * 0.016, weight: 0.7 },
@@ -207,7 +209,7 @@
 
     for (var i = 0; i < octaves.length; i++) {
       var o = octaves[i];
-      var b = glowLayers[i].render(source, devW, devH, o.radius, p.ink);
+      var b = layers[i].render(source, devW, devH, o.radius, p.ink);
       ctx.globalAlpha = Math.min(1, amount * o.weight);
       ctx.drawImage(b, 0, 0, devW, devH);
     }
@@ -285,7 +287,7 @@
     var Type = RTG.Type;
     var fs = src.fsPx;
     var room = width - src.fsPx * 0.85;
-    var tw = Type.measure(ctx, src.word, fs);
+    var tw = Type.measure(ctx, src.word, fs, p.kerning);
     if (room > 4 && tw > room) fs *= room / tw;
 
     ctx.globalAlpha = alpha;
@@ -296,10 +298,10 @@
       ctx.save();
       ctx.translate(x, y);
       ctx.scale(1, src.typeSquash);
-      Type.draw(ctx, src.word, fs, 0, 0);
+      Type.draw(ctx, src.word, fs, 0, 0, p.kerning);
       ctx.restore();
     } else {
-      Type.draw(ctx, src.word, fs, x, y);
+      Type.draw(ctx, src.word, fs, x, y, p.kerning);
     }
   }
 
@@ -349,10 +351,13 @@
       var diffuse = p.finish === 'diffuse';
       var shortSide = Math.min(W, H);
       var textRadius = p.sharpType ? 0 : (p.textBlur || 0) * 0.025 * shortSide * dpr;
+      var textGlow = p.textGlow || 0;
+      var textEffects = textRadius > 0 || textGlow > 0;
       words.length = 0;
 
       backdrop(ctx, W, H, p);
 
+      RTG.Ripples.updateTypes(p);
       RTG.Ripples.populateField(t);
 
       // The line art is always composed on its own transparent layer, so the capsule
@@ -400,16 +405,17 @@
       ctx.globalAlpha = 1;
       RTG.Grain.apply(ctx, devW, devH, p.grain, diffuse || p.paused);
       // Text has its own coverage layer: changing ring glow or diffusion never
-      // changes its blur, and Keep words sharp bypasses this pass entirely.
-      if (words.length && textRadius > 0) prepareSurface(textArt, W, H, devW, devH, dpr);
+      // changes its blur. A crisp word can still have an independently controlled halo.
+      if (words.length && textEffects) prepareSurface(textArt, W, H, devW, devH, dpr);
       for (var wi = 0; wi < words.length; wi++) {
         var word = words[wi];
-        drawWord(textRadius > 0 ? textArt.ctx : ctx, word.source, word.x, word.y, word.width, word.alpha, p);
+        drawWord(textEffects ? textArt.ctx : ctx, word.source, word.x, word.y, word.width, word.alpha, p);
       }
-      if (words.length && textRadius > 0) {
+      if (words.length && textEffects) {
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.globalAlpha = 1;
+        if (textGlow > 0) drawGlow(ctx, textArt.canvas, devW, devH, textGlow, p, textGlowLayers);
         ctx.drawImage(textLayer.render(textArt.canvas, devW, devH, textRadius, p.ink), 0, 0, devW, devH);
         ctx.restore();
       }

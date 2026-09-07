@@ -12,6 +12,9 @@
     figcaption { padding: 8px 0; }
     canvas { width: 320px; height: 400px; background: white; }
     .fixture { position: absolute; left: -10000px; width: 960px; height: 900px; }
+    .fixture #canvasViewport { width: 640px; height: 800px; }
+    .fixture #recordingFrame { padding: 5px; border: 2px solid #a75c85; }
+    .fixture canvas { width: auto; height: auto; }
   </style>
 </head>
 <body>
@@ -19,6 +22,6 @@
   <p>Runs against the actual Canvas renderer and generator controls. No packages required.</p>
   <pre id="results">Loading generator...</pre>
   <div id="previews"></div>
-  <script src="rendering.test.js"></script>
+  <script src="rendering.test.js?v=win98-3"></script>
 </body>
 </html>

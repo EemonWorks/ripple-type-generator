@@ -1,0 +1,15 @@
+Pixelated MS Sans Serif
+
+FontStruction MS Sans Serif and MS Sans Serif Bold by lou:
+https://fontstruct.com/fontstructions/show/1384746
+https://fontstruct.com/fontstructions/show/1384862
+
+Distributed under Creative Commons Attribution-ShareAlike 3.0.
+The original font licenses and readme files accompany each face.
+
+WOFF2 conversions obtained from 98.css by Jordan Scales:
+https://github.com/jdan/98.css
+Revision: b1d7a907371bbe523d6f64e3af97f714fdbd6d6a
+
+The fonts are bundled unchanged. The upstream source TTFs, notices and
+conversion project's license are included alongside the webfont files.

@@ -24,11 +24,16 @@
     inkSpread: 0.3,
     sharpType: true,
     textBlur: 0.15,
+    textGlow: 0,
+    kerning: 0,
     glow: 0.45,
     soften: 0.12,
     grain: 0.055,
     bg: '#5e9de0',
     ink: '#f0f5fd',
+    pageMode: 'fit',
+    pageWidth: 1920,
+    pageHeight: 1080,
     paused: false
   };
 
@@ -39,6 +44,15 @@
     ink: { bg: '#efe7d8', ink: '#1d1c1a' },
     acid: { bg: '#c9f24a', ink: '#152210' },
     rust: { bg: '#bf4f2b', ink: '#ffe7d4' }
+  };
+
+  var UI_COLORS = {
+    uiFace: { value: '#f8d7e2', css: '--ui-face' },
+    uiTitle: { value: '#cdc4fd', css: '--ui-title' },
+    uiText: { value: '#4b233d', css: '--ui-text' },
+    uiHighlight: { value: '#fff4f9', css: '--ui-highlight' },
+    uiShadow: { value: '#a75c85', css: '--ui-shadow' },
+    uiDesktop: { value: '#edddea', css: '--ui-desktop' }
   };
 
   var FORMAT = {
@@ -53,6 +67,8 @@
   FORMAT.inkBlur = FORMAT.breaks;
   FORMAT.inkSpread = FORMAT.breaks;
   FORMAT.textBlur = FORMAT.breaks;
+  FORMAT.textGlow = FORMAT.breaks;
+  FORMAT.kerning = function (v) { return (v > 0 ? '+' : '') + v.toFixed(2) + 'em'; };
 
   function $(id) { return document.getElementById(id); }
 
@@ -67,6 +83,15 @@
   }
 
   var rail, panel, toggle, recDot, recTime, btnRec, btnPause;
+  var layoutChange;
+  var pageDirty = false;
+
+  var PAGE_PRESETS = {
+    '16:9': [1920, 1080],
+    '9:16': [1080, 1920],
+    '4:4': [1080, 1080],
+    '18:9': [2160, 1080]
+  };
 
   function formatClock(sec) {
     if (!isFinite(sec) || sec < 0) sec = 0;
@@ -84,7 +109,6 @@
       var v = parseFloat(el.value);
       state[key] = v;
       if (out) out.textContent = fmt(v);
-      el.style.setProperty('--range-fill', (100 * (v - +el.min) / (+el.max - +el.min)) + '%');
       el.setAttribute('aria-valuetext', fmt(v));
       if (onChange) onChange();
     }
@@ -94,8 +118,57 @@
   }
 
   function applyColours() {
-    document.body.style.background = state.bg;
-    document.documentElement.style.background = state.bg;
+    $('stage').style.background = state.bg;
+  }
+
+  function syncUiColor(id) {
+    state[id] = $(id).value;
+    document.documentElement.style.setProperty(UI_COLORS[id].css, state[id]);
+  }
+
+  function applyPageSize() {
+    if (RTG.Exporter.isRecording()) {
+      $('captureStatus').textContent = 'Stop recording to resize';
+      return;
+    }
+    if (!$('pageSizeForm').reportValidity()) return;
+    state.pageMode = 'fixed';
+    state.pageWidth = Number($('pageWidth').value);
+    state.pageHeight = Number($('pageHeight').value);
+    pageDirty = false;
+    if (layoutChange) layoutChange();
+  }
+
+  function initPageSize() {
+    $('pageSizeForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      applyPageSize();
+    });
+    ['pageWidth', 'pageHeight'].forEach(function (id) {
+      $(id).addEventListener('input', function () {
+        pageDirty = true;
+        $('pageRatio').value = 'custom';
+      });
+    });
+    $('pageRatio').addEventListener('change', function (e) {
+      if (RTG.Exporter.isRecording()) {
+        $('captureStatus').textContent = 'Stop recording to resize';
+        return;
+      }
+      var preset = e.target.value;
+      if (preset === 'fit') {
+        state.pageMode = 'fit';
+        pageDirty = false;
+        if (layoutChange) layoutChange();
+      } else if (PAGE_PRESETS[preset]) {
+        $('pageWidth').value = PAGE_PRESETS[preset][0];
+        $('pageHeight').value = PAGE_PRESETS[preset][1];
+        applyPageSize();
+      } else {
+        pageDirty = true;
+        $('pageWidth').focus();
+      }
+    });
   }
 
   function syncFinish() {
@@ -117,18 +190,16 @@
     input.dispatchEvent(new Event('input'));
   }
 
-  /**
-   * Switches the typeface. The font is requested explicitly because capsule sizes are
-   * measured at spawn time -- if the face were still loading, every ripple created in
-   * the meantime would be sized against the fallback and stay wrong for its whole life.
-   */
   function applyFace(key) {
     var face = RTG.Type.setFace(key);
     state.font = key;
 
     if (document.fonts && document.fonts.load) {
-      try { document.fonts.load(face.weight + ' 48px ' + face.family.split(',')[0]); }
-      catch (e) { /* non-fatal: falls back to the stack in face.family */ }
+      document.fonts.load(face.weight + ' 48px ' + face.family.split(',')[0]).then(function () {
+        RTG.Type.revision++;
+      }, function (error) {
+        console.warn('The selected web font could not load; using its fallback font.', error);
+      });
     }
   }
 
@@ -140,6 +211,7 @@
     toggle.setAttribute('aria-label', open ? 'Collapse controls' : 'Expand controls');
     toggle.title = (open ? 'Collapse' : 'Expand') + ' controls (H)';
     if (moveFocus) toggle.focus({ preventScroll: true });
+    if (layoutChange) layoutChange();
   }
 
   var Controls = {
@@ -153,6 +225,8 @@
       recTime = $('recTime');
       btnRec = $('btnRec');
       btnPause = $('btnPause');
+      layoutChange = hooks.onLayoutChange;
+      initPageSize();
 
       var camChange = hooks.onCameraChange;
 
@@ -173,7 +247,23 @@
       bindRange('inkBlur', 'inkBlur');
       bindRange('inkSpread', 'inkSpread');
       bindRange('textBlur', 'textBlur');
+      bindRange('textGlow', 'textGlow');
+      bindRange('kerning', 'kerning');
       bindRange('grain', 'grain');
+
+      Object.keys(UI_COLORS).forEach(function (id) {
+        $(id).addEventListener('input', function () { syncUiColor(id); });
+        syncUiColor(id);
+      });
+      $('btnUiReset').addEventListener('click', function () {
+        Object.keys(UI_COLORS).forEach(function (id) {
+          $(id).value = UI_COLORS[id].value;
+          syncUiColor(id);
+        });
+      });
+      document.querySelectorAll('[data-command]').forEach(function (button) {
+        button.addEventListener('click', function () { $(button.dataset.command).click(); });
+      });
 
       $('finish').addEventListener('change', syncFinish);
       syncFinish();
@@ -243,11 +333,23 @@
       applyColours();
     },
 
+    setCanvasSize: function (width, height) {
+      $('canvasDimensions').textContent = width + ' x ' + height + ' px';
+      if (!pageDirty) {
+        $('pageWidth').value = width;
+        $('pageHeight').value = height;
+      }
+    },
+
     setRecording: function (on) {
       btnRec.textContent = on ? 'Stop recording' : 'Record video';
       btnRec.classList.toggle('active', on);
       btnRec.setAttribute('aria-pressed', String(on));
       recDot.hidden = !on;
+      $('appWindow').classList.toggle('is-recording', on);
+      $('recordingStatus').textContent = on ? 'Recording this canvas' : 'Recording area';
+      $('captureStatus').textContent = on ? 'Recording' : 'Ready';
+      $('pageSizeControls').disabled = on;
     },
 
     /** Refreshes the recording read-out once per frame. */

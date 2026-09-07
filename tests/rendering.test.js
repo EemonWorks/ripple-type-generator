@@ -41,7 +41,7 @@
 
   async function loadApp() {
     var url = new URL('../index.html', location.href);
-    var response = await fetch(url);
+    var response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) throw new Error('Could not load generator: HTTP ' + response.status);
     var page = new DOMParser().parseFromString(await response.text(), 'text/html');
     var fixture = document.createElement('div');
@@ -54,7 +54,9 @@
     for (var i = 0; i < scripts.length; i++) {
       await new Promise(function (resolve, reject) {
         var script = document.createElement('script');
-        script.src = new URL(scripts[i].getAttribute('src'), url);
+        var scriptUrl = new URL(scripts[i].getAttribute('src'), url);
+        scriptUrl.searchParams.set('check', Date.now());
+        script.src = scriptUrl;
         script.onload = resolve;
         script.onerror = function () { reject(new Error('Could not load ' + script.src)); };
         document.head.appendChild(script);
@@ -142,17 +144,14 @@
       assert(R.Controls.state.words.join('|') === before, 'Preset changed the word list');
     });
 
-    test('Segmented sliders and sharp-text checkbox update live state', function () {
-      ['inkBlur', 'inkSpread', 'lineWeight', 'textBlur'].forEach(function (id) {
+    test('Sliders and sharp-text checkbox update live state', function () {
+      ['inkBlur', 'inkSpread', 'lineWeight', 'textBlur', 'textGlow', 'kerning'].forEach(function (id) {
         var el = doc.getElementById(id);
         var values = [+el.min, +el.max, +el.defaultValue];
         values.forEach(function (value) {
           el.value = value;
           el.dispatchEvent(new Event('input'));
           assert(R.Controls.state[id] === value, 'Unwired slider: ' + id);
-          var expected = 100 * (value - +el.min) / (+el.max - +el.min);
-          assert(Math.abs(parseFloat(el.style.getPropertyValue('--range-fill')) - expected) < 0.01,
-            'Segmented track fill is stale: ' + id);
           assert(el.getAttribute('aria-valuetext'), 'Slider is missing a readable value: ' + id);
         });
       });
@@ -219,6 +218,137 @@
         'A removed media script is still referenced');
     });
 
+    test('Temporary UI colors are independent of the artwork and reset to the reference', function () {
+      var bg = R.Controls.state.bg, inkColor = R.Controls.state.ink;
+      var input = doc.getElementById('uiFace');
+      input.value = '#b8e3dc';
+      input.dispatchEvent(new Event('input'));
+      assert(doc.documentElement.style.getPropertyValue('--ui-face') === '#b8e3dc', 'Window color did not change');
+      assert(R.Controls.state.bg === bg && R.Controls.state.ink === inkColor, 'UI color changed the artwork palette');
+      doc.getElementById('btnUiReset').click();
+      assert(input.value === '#f8d7e2' && doc.getElementById('uiTitle').value === '#cdc4fd',
+        'Reference colors were not restored');
+    });
+
+    test('Canvas backing size follows the framed area and existing drops survive resizing', function () {
+      var viewport = doc.getElementById('canvasViewport');
+      var width = viewport.style.width, height = viewport.style.height;
+      var c = doc.getElementById('stage');
+      var oldW = R.Camera.W, oldH = R.Camera.H;
+      var source = R.Ripples.spawn(oldW * 0.4, oldH * 0.5, 'Still here', 0, R.Controls.state);
+      var seed = source.seed;
+      try {
+        viewport.style.width = '420px';
+        viewport.style.height = '460px';
+        window.dispatchEvent(new Event('resize'));
+        var dpr = Math.min(devicePixelRatio || 1, 2);
+        assert(c.width === Math.round(R.Camera.W * dpr) && c.height === Math.round(R.Camera.H * dpr),
+          'Export resolution differs from canvas dimensions');
+        assert(R.Camera.W < oldW && R.Camera.H < oldH, 'Canvas did not resize with its frame');
+        assert(Math.abs(source.ax / R.Camera.W - 0.4) < 0.0001 &&
+          Math.abs(source.ay / R.Camera.H - 0.5) < 0.0001 && source.seed === seed,
+          'Layout resize lost or moved the ripple composition');
+        assert(doc.getElementById('canvasDimensions').textContent.indexOf(String(c.width)) >= 0,
+          'Export size readout is stale');
+      } finally {
+        viewport.style.width = width;
+        viewport.style.height = height;
+        window.dispatchEvent(new Event('resize'));
+      }
+    });
+
+    test('Recording keeps its resolution and maps clicks correctly in a fitted canvas', function () {
+      var viewport = doc.getElementById('canvasViewport');
+      var width = viewport.style.width, height = viewport.style.height;
+      var c = doc.getElementById('stage');
+      var backingW = c.width, backingH = c.height, worldW = R.Camera.W, worldH = R.Camera.H;
+      var isRecording = R.Exporter.isRecording;
+      try {
+        R.Exporter.isRecording = function () { return true; };
+        R.Controls.setRecording(true);
+        viewport.style.width = '310px';
+        viewport.style.height = '360px';
+        window.dispatchEvent(new Event('resize'));
+        assert(c.width === backingW && c.height === backingH, 'Recording resolution changed with the UI');
+        var rect = c.getBoundingClientRect();
+        assert(Math.abs(rect.width / rect.height - worldW / worldH) < 0.01, 'Recording preview is stretched');
+        R.Droplets.clear();
+        c.dispatchEvent(new PointerEvent('pointerdown', {
+          clientX: rect.left + rect.width * 0.25, clientY: rect.top + rect.height * 0.75, bubbles: true
+        }));
+        assert(Math.abs(R.Droplets.list[0].ax - worldW * 0.25) < 0.01 &&
+          Math.abs(R.Droplets.list[0].ay - worldH * 0.75) < 0.01, 'Click missed the fitted recording area');
+        assert(doc.getElementById('appWindow').classList.contains('is-recording'), 'Recording frame is not marked');
+        assert(doc.getElementById('pageSizeControls').disabled, 'Page size is editable during recording');
+      } finally {
+        R.Exporter.isRecording = isRecording;
+        R.Controls.setRecording(false);
+        R.Droplets.clear();
+        viewport.style.width = width;
+        viewport.style.height = height;
+        window.dispatchEvent(new Event('resize'));
+      }
+    });
+
+    test('Page ratio presets export the requested pixel dimensions', function () {
+      var c = doc.getElementById('stage');
+      var presets = [['16:9', 1920, 1080], ['9:16', 1080, 1920], ['4:4', 1080, 1080], ['18:9', 2160, 1080]];
+      try {
+        presets.forEach(function (p) {
+          select('pageRatio', p[0]);
+          assert(c.width === p[1] && c.height === p[2], 'Wrong backing dimensions for ' + p[0]);
+          assert(R.Controls.state.pageMode === 'fixed', 'Preset is not fixed-size');
+          var rect = c.getBoundingClientRect();
+          assert(Math.abs(rect.width / rect.height - p[1] / p[2]) < 0.01, 'Preview aspect ratio differs from ' + p[0]);
+        });
+      } finally {
+        select('pageRatio', 'fit');
+      }
+    });
+
+    test('Custom width and height apply exactly and reject invalid values', function () {
+      var c = doc.getElementById('stage');
+      var form = doc.getElementById('pageSizeForm');
+      var width = doc.getElementById('pageWidth'), height = doc.getElementById('pageHeight');
+      var report = form.reportValidity;
+      try {
+        width.value = '1370';
+        height.value = '850';
+        width.dispatchEvent(new Event('input'));
+        height.dispatchEvent(new Event('input'));
+        assert(doc.getElementById('pageRatio').value === 'custom', 'Manual edit did not select Custom');
+        form.dispatchEvent(new Event('submit', { cancelable: true }));
+        assert(c.width === 1370 && c.height === 850, 'Custom size was not applied');
+        form.reportValidity = function () { return this.checkValidity(); };
+        width.value = '20';
+        form.dispatchEvent(new Event('submit', { cancelable: true }));
+        assert(c.width === 1370 && R.Controls.state.pageWidth === 1370, 'Invalid size changed the recording canvas');
+      } finally {
+        form.reportValidity = report;
+        select('pageRatio', 'fit');
+      }
+    });
+
+    test('Image and video export actions are in the bottom status row only', function () {
+      ['btnPng', 'btnRec'].forEach(function (id) {
+        assert(doc.getElementById(id).closest('.status-bar'), id + ' is not in the bottom status bar');
+        assert(!doc.querySelector('.menu-bar [data-command="' + id + '"]'), 'Duplicate export action remains in the top menu');
+      });
+    });
+
+    test('Kerning uses the same spacing for measurement and centered drawing', function () {
+      var ctx = canvas(300, 100).getContext('2d');
+      var text = 'AVera', size = 30;
+      var normal = R.Type.measure(ctx, text, size, 0);
+      var spaced = R.Type.measure(ctx, text, size, 0.2);
+      assert(Math.abs(spaced - normal - (text.length - 1) * size * 0.2) < 0.001,
+        'Measured spacing does not match the kerning control');
+      var positions = [];
+      ctx.fillText = function (glyph, x) { positions.push(x); };
+      R.Type.draw(ctx, text, size, 150, 50, 0.2);
+      assert(Math.abs(positions[0] - (150 - spaced / 2)) < 0.001, 'Kerned text is no longer centered');
+    });
+
     var W = 640, H = 800;
     R.Camera.configure(W, H, 15, 0.02 + 0.55 * Math.pow(1 - 0.72, 2.5));
     R.Ripples.clear();
@@ -277,6 +407,36 @@
         var bottom = Math.floor(H * 0.94) * W * 4;
         assert(identical(clear.slice(bottom), blurred.slice(bottom)), 'Text blur changed distant rings');
       });
+    });
+
+    test('Text glow has its own amount in both finishes, including sharp words', function () {
+      ['glow', 'diffuse'].forEach(function (finish) {
+        var plain = pixels(render({ finish: finish, sharpType: true, textGlow: 0, glow: 0 }));
+        var luminous = pixels(render({ finish: finish, sharpType: true, textGlow: 1, glow: 0 }));
+        assert(!identical(plain, luminous), 'Text glow has no effect in ' + finish);
+        var bottom = Math.floor(H * 0.94) * W * 4;
+        assert(identical(plain.slice(bottom), luminous.slice(bottom)), 'Text glow altered distant rings');
+      });
+      assert(!doc.getElementById('textGlow').disabled, 'Keep words sharp incorrectly disables text glow');
+    });
+
+    test('Kerning reflows live words without respawning their ripples', function () {
+      var source = R.Ripples.list[0], seed = source.seed, birth = source.t0;
+      var normal = pixels(render({ kerning: 0 }));
+      var key = source.typeKey;
+      var spaced = pixels(render({ kerning: 0.3 }));
+      assert(!identical(normal, spaced) && source.typeKey !== key, 'Live kerning did not update');
+      assert(source.seed === seed && source.t0 === birth, 'Kerning restarted the ripple');
+      render({ kerning: 0 });
+    });
+
+    test('UI palette changes never appear in the captured canvas', function () {
+      var before = pixels(render({ grain: 0.16 }));
+      var input = doc.getElementById('uiTitle');
+      input.value = '#dbeed1';
+      input.dispatchEvent(new Event('input'));
+      assert(identical(before, pixels(render({ grain: 0.16 }))), 'Window tint leaked into the canvas');
+      doc.getElementById('btnUiReset').click();
     });
 
     test('Line weight changes ring coverage in both finishes', function () {

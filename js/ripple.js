@@ -26,6 +26,7 @@
    * geometric sans looks wrong on a condensed or a serif.
    */
   var FACES = {
+    win98: { family: '"Pixelated MS Sans Serif", "MS Sans Serif", Tahoma, sans-serif', weight: 400, tracking: 0.045 },
     inter: { family: '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif', weight: 500, tracking: 0.045 },
     poppins: { family: '"Poppins", "Century Gothic", "Avenir Next", system-ui, sans-serif', weight: 500, tracking: 0.075 },
     grotesk: { family: '"Space Grotesk", "Avenir Next", system-ui, sans-serif', weight: 500, tracking: 0.055 },
@@ -40,6 +41,7 @@
     family: FACES.poppins.family,
     weight: FACES.poppins.weight,
     tracking: FACES.poppins.tracking,
+    revision: 0,
 
     setFace: function (key) {
       var f = FACES[key] || FACES.poppins;
@@ -55,11 +57,12 @@
      * Advance widths are summed per glyph because the text is also drawn per glyph, to
      * apply tracking identically everywhere (canvas letterSpacing is not dependable).
      */
-    measure: function (ctx, text, px) {
+    measure: function (ctx, text, px, kerning) {
       ctx.font = this.font(px);
       var w = 0;
-      for (var i = 0; i < text.length; i++) w += ctx.measureText(text[i]).width;
-      if (text.length > 1) w += this.tracking * px * (text.length - 1);
+      var glyphs = Array.from(text);
+      for (var i = 0; i < glyphs.length; i++) w += ctx.measureText(glyphs[i]).width;
+      if (glyphs.length > 1) w += (this.tracking + (kerning || 0)) * px * (glyphs.length - 1);
       return w;
     },
 
@@ -72,15 +75,16 @@
       return px * 0.72;
     },
 
-    draw: function (ctx, text, px, cx, cy) {
+    draw: function (ctx, text, px, cx, cy, kerning) {
       ctx.font = this.font(px);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
 
-      var x = cx - this.measure(ctx, text, px) * 0.5;
-      for (var i = 0; i < text.length; i++) {
-        ctx.fillText(text[i], x, cy);
-        x += ctx.measureText(text[i]).width + this.tracking * px;
+      var x = cx - this.measure(ctx, text, px, kerning) * 0.5;
+      var glyphs = Array.from(text);
+      for (var i = 0; i < glyphs.length; i++) {
+        ctx.fillText(glyphs[i], x, cy);
+        x += ctx.measureText(glyphs[i]).width + (this.tracking + (kerning || 0)) * px;
       }
     }
   };
@@ -94,8 +98,6 @@
 
   function Source(ax, ay, word, t0, p) {
     var cam = RTG.Camera;
-    var k = cam.cosPhi * cam.s0 / cam.P;
-
     this.ax = ax;
     this.ay = ay;
     this.u = ax;
@@ -108,19 +110,33 @@
     var depth = 0.62 + 0.5 * clamp(ay / cam.H, 0, 1);
     this.depth = depth;
 
-    var fsPx = p.typeSize * 0.046 * cam.H * depth * (0.93 + Math.random() * 0.14);
-    this.fsPx = fsPx;
+    this.baseFsPx = 0.046 * cam.H * depth * (0.93 + Math.random() * 0.14);
 
     // Gaps in the rings are keyed off this, so a ring's breaks stay put as it expands
     // instead of crawling around it every frame.
     this.seed = (Math.random() * 0x7ffffff) | 0;
+    this.drawnRx = p.rippleSpread * 0.26 * cam.H * depth * (0.85 + Math.random() * 0.35);
 
-    // typeTilt 0 leaves the word upright as in the reference; 1 lays it flat into the
-    // water, matching the plane's own foreshortening.
+    this.expand = 2.6 / Math.max(0.05, p.rippleSpeed);
+    this.ringCount = Math.max(1, Math.round(p.ringCount));
+    this.ringInterval = this.expand / (this.ringCount + 0.6);
+    this.life = (this.ringCount - 1) * this.ringInterval + this.expand;
+    this.updateType(p);
+  }
+
+  Source.prototype.updateType = function (p) {
+    var cam = RTG.Camera;
+    var key = [p.typeSize, p.typeTilt, p.kerning, Type.family, Type.revision,
+      cam.s0, cam.P, this.baseFsPx, this.drawnRx].join('|');
+    if (key === this.typeKey) return;
+    this.typeKey = key;
+    var k = cam.cosPhi * cam.s0 / cam.P;
+    var fsPx = this.baseFsPx * p.typeSize;
+    this.fsPx = fsPx;
     this.typeSquash = 1 - clamp(p.typeTilt || 0, 0, 1) * (1 - cam.s0);
 
-    var textW = word ? Type.measure(measureCtx, word, fsPx) : 0;
-    var capH = Type.capHeight(measureCtx, word || 'H', fsPx);
+    var textW = this.word ? Type.measure(measureCtx, this.word, fsPx, p.kerning) : 0;
+    var capH = Type.capHeight(measureCtx, this.word || 'H', fsPx);
 
     // The capsule must clear the word on both axes. Being foreshortened, a short word
     // needs a disproportionately wide capsule just to stay tall enough for the type.
@@ -132,11 +148,10 @@
     // Sizes are compared in *drawn* pixels, never in map units: the map-to-screen
     // relation is non-linear, so a ratio that holds in one space does not hold in the
     // other. Getting this wrong lets the capsule floor push maxR past the camera.
-    var drawnRx = p.rippleSpread * 0.26 * cam.H * depth * (0.85 + Math.random() * 0.35);
-    if (word) drawnRx = Math.max(drawnRx, capDrawn * 2.2);
+    var drawnRx = this.word ? Math.max(this.drawnRx, capDrawn * 2.2) : this.drawnRx;
 
     this.maxR = Math.min(radiusForDrawn(drawnRx, k), cam.maxSafeRadius());
-    this.capR = word ? Math.min(radiusForDrawn(capDrawn, k), this.maxR / 1.6) : 0;
+    this.capR = this.word ? Math.min(radiusForDrawn(capDrawn, k), this.maxR / 1.6) : 0;
 
     // Drawn capsule half-extents, used to keep ripples from landing on top of one
     // another. Kept here so placement never has to redo the projection maths.
@@ -145,18 +160,12 @@
     this.capPx = this.capR / wc;
     this.capPy = this.capPx * cam.s0 / wc;
 
-    // rippleSpeed sets how long the ripple takes to play out, whatever its size.
-    this.expand = 2.6 / Math.max(0.05, p.rippleSpeed);
-    this.ringCount = Math.max(1, Math.round(p.ringCount));
-    this.ringInterval = this.expand / (this.ringCount + 0.6);
-
     // Rings run from the capsule rim out to maxR rather than from zero. The capsule can
     // occupy well over half the map radius, so starting at zero would hide most rings
     // inside it and leave a single lonely ring on screen.
     this.span = Math.max(1, this.maxR - this.capR);
     this.spacing = this.span / (this.ringCount + 0.6);
-    this.life = (this.ringCount - 1) * this.ringInterval + this.expand;
-  }
+  };
 
   /** Fraction of the way from the capsule rim to the outer limit. */
   Source.prototype.progressOf = function (k, t) {
@@ -194,6 +203,10 @@
       for (var i = list.length - 1; i >= 0; i--) {
         if (t - list[i].t0 > list[i].life) list.splice(i, 1);
       }
+    },
+
+    updateTypes: function (p) {
+      for (var i = 0; i < this.list.length; i++) this.list[i].updateType(p);
     },
 
     /** Publishes every live ring into the shared interference field. */
