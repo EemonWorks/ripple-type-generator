@@ -9,6 +9,8 @@ artwork; only the framed canvas is exported.
 Built with plain HTML, CSS and JavaScript using Canvas 2D. No build step, package
 installation, backend, API keys, account system or database is required.
 
+![Ripple Type Generator interface and animated ripple artwork](assets/ripple-type-generator-preview.png)
+
 ## Run locally
 
 From the repository root:
