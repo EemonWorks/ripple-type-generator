@@ -152,7 +152,9 @@ path. The Worker does two things:
 - removes the `/rippletypegenerator` prefix before asking Cloudflare Static Assets for
   `index.html`, `js/*`, `styles.css` and `assets/*`.
 
-The trailing slash is intentional; the no-slash URL redirects automatically.
+The trailing slash is intentional; the no-slash URL redirects automatically. The
+temporary `workers.dev` preview also serves the app at its root, so you can test the
+deployment before the custom domain route is active.
 
 #### One-time Cloudflare setup
 

@@ -9,12 +9,10 @@ export default {
       return Response.redirect(incoming.toString(), 308);
     }
 
-    if (!incoming.pathname.startsWith(`${BASE_PATH}/`)) {
-      return new Response("Not found", { status: 404 });
-    }
-
     const assetUrl = new URL(incoming);
-    const assetPath = incoming.pathname.slice(BASE_PATH.length);
+    const assetPath = incoming.pathname.startsWith(`${BASE_PATH}/`)
+      ? incoming.pathname.slice(BASE_PATH.length)
+      : incoming.pathname;
     assetUrl.pathname = assetPath === "/" ? "/index.html" : assetPath;
 
     return env.ASSETS.fetch(new Request(assetUrl, request));
