@@ -111,36 +111,95 @@ If the project is already a Git repository, use its existing configuration rathe
 than running `git init` again or overwriting its remote. No secrets or environment
 variables need to be uploaded. `.gitignore` excludes common local files and credentials.
 
-## Deploy on Cloudflare Pages
+## Deploy on Cloudflare
 
-This app is a static site. Use **Pages**, not a Worker requiring server code.
+This repository supports both Cloudflare deployment styles:
+
+| Goal | Cloudflare product | Result |
+| --- | --- | --- |
+| Fastest public link | Pages | `https://<project>.pages.dev` |
+| This exact path | Workers Static Assets + route | `https://eemonroy.com/rippletypegenerator/` |
+| A separate branded address | Pages custom domain | For example, `https://rippletypegenerator.eemonroy.com` |
+
+### Option A: Cloudflare Pages
+
+Use this when a `pages.dev` URL or subdomain is enough:
 
 1. In Cloudflare, open **Workers & Pages → Create application → Pages**.
-2. Choose **Import an existing Git repository** and connect the GitHub repository.
+2. Choose **Import an existing Git repository** and connect `EemonWorks/ripple-type-generator`.
 3. Configure:
 
 | Setting | Value |
 | --- | --- |
-| Production branch | Your release branch, usually `main` |
+| Production branch | `main` |
 | Framework preset | None |
 | Build command | `exit 0` |
 | Build output directory | `.` |
-| Root directory | Leave blank when `index.html` is at the repository root |
+| Root directory | Leave blank |
 | Environment variables | None |
 
-4. Deploy. Cloudflare provides a `*.pages.dev` address and redeploys when the selected
-   branch receives new commits.
+4. Deploy. Cloudflare provides a `*.pages.dev` URL. A Pages custom domain can then
+   use a subdomain such as `rippletypegenerator.eemonroy.com`.
 
-The root `_headers` file adds basic response headers, revalidates mutable JS/CSS/HTML,
-and keeps the diagnostic pages out of search indexes. Python's local server does not
-apply this file; Cloudflare Pages does.
+### Option B: `eemonroy.com/rippletypegenerator/`
 
-If deployment returns 404, check that the output directory contains `index.html`
-directly, not a nested copy of the repository.
+Pages custom domains do not mount a project below a path on an existing site. The
+repository therefore includes `wrangler.jsonc` and `src/worker.js` for the requested
+path. The Worker does two things:
+
+- redirects `/rippletypegenerator` to `/rippletypegenerator/`, so the app's relative
+  CSS, JavaScript and font URLs resolve correctly;
+- removes the `/rippletypegenerator` prefix before asking Cloudflare Static Assets for
+  `index.html`, `js/*`, `styles.css` and `assets/*`.
+
+The trailing slash is intentional; the no-slash URL redirects automatically.
+
+#### One-time Cloudflare setup
+
+You must do these account and domain steps:
+
+1. Add `eemonroy.com` to the Cloudflare account if it is not already there.
+2. If Cloudflare asks for it, update the domain's nameservers at the registrar.
+3. Make sure the domain has an active, proxied DNS record. Cloudflare routes require
+   an active zone and a proxied hostname.
+4. Make sure no existing Worker route already owns
+   `eemonroy.com/rippletypegenerator*`.
+
+#### Deploy from your Mac
+
+From the project root:
+
+```sh
+npx wrangler login
+npx wrangler deploy
+```
+
+Wrangler reads `wrangler.jsonc`, uploads the static files, and creates the route
+`eemonroy.com/rippletypegenerator*`. It does not need a build step or environment
+variables. The first login and Cloudflare account authorization must be completed by
+you.
+
+#### Deploy from GitHub
+
+Cloudflare can also connect the GitHub repository through Workers Builds. Choose
+`EemonWorks/ripple-type-generator`, branch `main`, and use:
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npx wrangler deploy` |
+| Root directory | `/` |
+| Environment variables | None |
+
+Authorize the Cloudflare account to deploy the Worker and manage the
+`eemonroy.com` route. Each push to `main` then redeploys the app.
+
+The root `_headers` file is retained for Pages deployments. Workers Static Assets
+handles caching of uploaded assets automatically.
 
 Official references:
-[Static HTML deployment](https://developers.cloudflare.com/pages/framework-guides/deploy-anything/) ·
-[Pages headers](https://developers.cloudflare.com/pages/configuration/headers/).
+[Cloudflare Pages static HTML](https://developers.cloudflare.com/pages/framework-guides/deploy-anything/) ·
+[Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/) ·
+[Worker routes](https://developers.cloudflare.com/workers/configuration/routing/routes/).
 
 ## Development
 
