@@ -2,9 +2,8 @@
  * Risograph-style grain.
  *
  * The reference print has a luminance sigma of about 2.5 -- barely there, but it is
- * what stops the flat blue reading as vector art. A noise tile is rendered once and
- * composited as a repeating pattern, offset each frame so the grain shimmers instead
- * of sitting still.
+ * what stops the flat blue reading as vector art. The repeating tile can shimmer for
+ * the original water look, or stay fixed for diffused ink and paused frames.
  */
 (function (RTG) {
   'use strict';
@@ -37,14 +36,14 @@
 
   var Grain = {
     /** W/H are device pixels: the grain is composited 1:1 regardless of DPR. */
-    apply: function (ctx, W, H, amount) {
+    apply: function (ctx, W, H, amount, stationary) {
       if (amount <= 0.001) return;
       if (!canvas) build();
       if (!pattern) pattern = ctx.createPattern(canvas, 'repeat');
       if (!pattern) return;
 
-      var ox = (Math.random() * TILE) | 0;
-      var oy = (Math.random() * TILE) | 0;
+      var ox = stationary ? 0 : (Math.random() * TILE) | 0;
+      var oy = stationary ? 0 : (Math.random() * TILE) | 0;
 
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);

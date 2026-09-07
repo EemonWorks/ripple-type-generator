@@ -11,6 +11,7 @@
     rippleSpeed: 1,
     rippleSpread: 1,
     ringCount: 4,
+    lineWeight: 1,
     breaks: 0.25,
     interference: 1,
     tilt: 15,
@@ -18,6 +19,11 @@
     typeSize: 1,
     typeTilt: 0,
     font: 'inter',
+    finish: 'glow',
+    inkBlur: 0.4,
+    inkSpread: 0.3,
+    sharpType: true,
+    textBlur: 0.15,
     glow: 0.45,
     soften: 0.12,
     grain: 0.055,
@@ -28,6 +34,7 @@
 
   var PRESETS = {
     reference: { bg: '#5e9de0', ink: '#f0f5fd' },
+    cobalt: { bg: '#f4f5f2', ink: '#2454f5', finish: 'diffuse', inkBlur: 0.4, inkSpread: 0.3, grain: 0.16 },
     midnight: { bg: '#0e1930', ink: '#7fa9f0' },
     ink: { bg: '#efe7d8', ink: '#1d1c1a' },
     acid: { bg: '#c9f24a', ink: '#152210' },
@@ -37,11 +44,15 @@
   var FORMAT = {
     dropRate: function (v) { return v.toFixed(2) + 's'; },
     ringCount: function (v) { return v.toFixed(0); },
+    lineWeight: function (v) { return v.toFixed(2) + 'x'; },
     tilt: function (v) { return v.toFixed(0) + '\u00B0'; },
     grain: function (v) { return (v * 100).toFixed(1); },
     breaks: function (v) { return (v * 100).toFixed(0) + '%'; },
     typeTilt: function (v) { return (v * 100).toFixed(0) + '%'; }
   };
+  FORMAT.inkBlur = FORMAT.breaks;
+  FORMAT.inkSpread = FORMAT.breaks;
+  FORMAT.textBlur = FORMAT.breaks;
 
   function $(id) { return document.getElementById(id); }
 
@@ -49,154 +60,18 @@
     var parts = raw.split(/[\n,]+/);
     var out = [];
     for (var i = 0; i < parts.length; i++) {
-      var w = parts[i].trim().toUpperCase();
+      var w = parts[i].trim();
       if (w) out.push(w);
     }
     return out;
   }
 
-  var panel, toggle, recDot, recTime, btnRec, btnPause, stage;
-  var lyricStatus, btnPlay, ytHost;
-  var captionSource = '';
-  var lastShownSecond = -1;
+  var rail, panel, toggle, recDot, recTime, btnRec, btnPause;
 
   function formatClock(sec) {
     if (!isFinite(sec) || sec < 0) sec = 0;
     var s = Math.floor(sec);
     return Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60);
-  }
-
-  function setStatus(msg, bad) {
-    lyricStatus.textContent = msg;
-    lyricStatus.classList.toggle('bad', !!bad);
-    lastShownSecond = -1;
-  }
-
-  function describeLyrics() {
-    var bits = [];
-
-    if (RTG.Lyrics.hasWords()) {
-      bits.push(RTG.Lyrics.count() + (RTG.Lyrics.isTimed()
-        ? ' timed words'
-        : ' words, untimed \u2014 spread across the track'));
-    }
-    if (RTG.Player.isReady()) {
-      bits.push(RTG.Player.mode() === 'yt' ? 'YouTube ready' : 'audio ready');
-    }
-
-    if (!bits.length) return 'Drop a caption or audio file anywhere on the page.';
-    if (RTG.Lyrics.hasWords() && RTG.Player.isReady()) return bits.join(' \u00b7 ') + '. Press Play.';
-    return bits.join(' \u00b7 ') + '.';
-  }
-
-  function readCaptions(file) {
-    var reader = new FileReader();
-
-    reader.onload = function () {
-      captionSource = String(reader.result);
-      var res = RTG.Lyrics.load(captionSource, $('lyricGrain').value);
-      if (!res.ok) {
-        captionSource = '';
-        setStatus(res.error, true);
-        return;
-      }
-      RTG.Lyrics.rewind();
-      setStatus(describeLyrics());
-    };
-
-    reader.onerror = function () { setStatus('Could not read that file.', true); };
-    reader.readAsText(file);
-  }
-
-  function isAudio(file) {
-    return /^audio\//.test(file.type) || /\.(mp3|m4a|wav|ogg|oga|flac|aac|opus)$/i.test(file.name);
-  }
-
-  function acceptFile(file) {
-    if (!file) return;
-
-    if (isAudio(file)) {
-      setStatus('Loading audio\u2026');
-      RTG.Player.loadAudio(file, function (err) {
-        if (err) { setStatus(err.message, true); return; }
-        ytHost.classList.remove('on');
-        setStatus(describeLyrics());
-      });
-      return;
-    }
-    readCaptions(file);
-  }
-
-  function initLyrics() {
-    lyricStatus = $('lyricStatus');
-    btnPlay = $('btnPlay');
-    ytHost = $('ytHost');
-
-    $('btnLoadYt').addEventListener('click', function () {
-      setStatus('Loading player\u2026');
-      RTG.Player.loadYouTube($('ytUrl').value, ytHost, function (err) {
-        if (err) { ytHost.classList.remove('on'); setStatus(err.message, true); return; }
-        ytHost.classList.add('on');
-        setStatus(describeLyrics());
-      });
-    });
-
-    $('capFile').addEventListener('change', function (e) {
-      acceptFile(e.target.files && e.target.files[0]);
-    });
-
-    // Re-parsing from the original text is what lets granularity change after loading.
-    $('lyricGrain').addEventListener('change', function (e) {
-      RTG.Lyrics.grain = e.target.value;
-      if (!captionSource) return;
-      RTG.Lyrics.load(captionSource, e.target.value);
-      RTG.Lyrics.rewind();
-      setStatus(describeLyrics());
-    });
-
-    btnPlay.addEventListener('click', function () {
-      if (!RTG.Player.isReady()) {
-        setStatus('Load a YouTube link, or drop an audio file, first.', true);
-        return;
-      }
-      RTG.Player.toggle();
-    });
-
-    $('btnLyricsClear').addEventListener('click', function () {
-      RTG.Lyrics.clear();
-      RTG.Player.unload();
-      captionSource = '';
-      ytHost.classList.remove('on');
-      ytHost.innerHTML = '';
-      $('capFile').value = '';
-      setStatus('Unloaded. Back to the word list.');
-    });
-
-    RTG.Player.onChange(function () {
-      var playing = RTG.Player.playing();
-      btnPlay.textContent = playing ? 'Pause' : 'Play';
-      btnPlay.classList.toggle('active', playing);
-
-      // Starting the track while the canvas is frozen would silently drop nothing.
-      if (playing && state.paused) $('btnPause').click();
-    });
-
-    ['dragenter', 'dragover'].forEach(function (type) {
-      window.addEventListener(type, function (e) {
-        e.preventDefault();
-        document.body.classList.add('dragging');
-      });
-    });
-
-    window.addEventListener('dragleave', function (e) {
-      if (!e.relatedTarget) document.body.classList.remove('dragging');
-    });
-
-    window.addEventListener('drop', function (e) {
-      e.preventDefault();
-      document.body.classList.remove('dragging');
-      acceptFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
-    });
   }
 
   function bindRange(id, key, onChange) {
@@ -209,6 +84,8 @@
       var v = parseFloat(el.value);
       state[key] = v;
       if (out) out.textContent = fmt(v);
+      el.style.setProperty('--range-fill', (100 * (v - +el.min) / (+el.max - +el.min)) + '%');
+      el.setAttribute('aria-valuetext', fmt(v));
       if (onChange) onChange();
     }
 
@@ -219,6 +96,25 @@
   function applyColours() {
     document.body.style.background = state.bg;
     document.documentElement.style.background = state.bg;
+  }
+
+  function syncFinish() {
+    state.finish = $('finish').value;
+    var diffuse = state.finish === 'diffuse';
+    $('glowControls').hidden = diffuse;
+    $('inkControls').hidden = !diffuse;
+  }
+
+  function syncTextBlur() {
+    state.sharpType = $('sharpType').checked;
+    $('textBlur').disabled = state.sharpType;
+    $('textBlur').closest('.slider').classList.toggle('is-disabled', state.sharpType);
+  }
+
+  function setRange(id, value) {
+    var input = $(id);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
   }
 
   /**
@@ -237,20 +133,26 @@
   }
 
   function setPanel(open) {
-    panel.classList.toggle('collapsed', !open);
+    var moveFocus = !open && panel.contains(document.activeElement);
+    rail.classList.toggle('collapsed', !open);
+    panel.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Collapse controls' : 'Expand controls');
+    toggle.title = (open ? 'Collapse' : 'Expand') + ' controls (H)';
+    if (moveFocus) toggle.focus({ preventScroll: true });
   }
 
   var Controls = {
     state: state,
 
     init: function (hooks) {
+      rail = $('controlRail');
       panel = $('panel');
       toggle = $('panelToggle');
       recDot = $('recDot');
       recTime = $('recTime');
       btnRec = $('btnRec');
       btnPause = $('btnPause');
-      stage = $('stage');
 
       var camChange = hooks.onCameraChange;
 
@@ -259,6 +161,7 @@
       bindRange('rippleSpeed', 'rippleSpeed');
       bindRange('rippleSpread', 'rippleSpread');
       bindRange('ringCount', 'ringCount');
+      bindRange('lineWeight', 'lineWeight');
       bindRange('breaks', 'breaks');
       bindRange('interference', 'interference');
       bindRange('tilt', 'tilt', camChange);
@@ -267,7 +170,15 @@
       bindRange('typeTilt', 'typeTilt');
       bindRange('glow', 'glow');
       bindRange('soften', 'soften');
+      bindRange('inkBlur', 'inkBlur');
+      bindRange('inkSpread', 'inkSpread');
+      bindRange('textBlur', 'textBlur');
       bindRange('grain', 'grain');
+
+      $('finish').addEventListener('change', syncFinish);
+      syncFinish();
+      $('sharpType').addEventListener('change', syncTextBlur);
+      syncTextBlur();
 
       var fontSel = $('fontFace');
       fontSel.addEventListener('change', function () { applyFace(fontSel.value); });
@@ -290,6 +201,13 @@
         state.ink = p.ink;
         bg.value = p.bg;
         ink.value = p.ink;
+        $('finish').value = p.finish || 'glow';
+        syncFinish();
+        if (p.finish === 'diffuse') {
+          setRange('inkBlur', p.inkBlur);
+          setRange('inkSpread', p.inkSpread);
+          setRange('grain', p.grain);
+        }
         applyColours();
       });
 
@@ -302,44 +220,41 @@
         state.paused = !state.paused;
         btnPause.textContent = state.paused ? 'Play' : 'Pause';
         btnPause.classList.toggle('active', state.paused);
+        btnPause.setAttribute('aria-pressed', String(state.paused));
       });
 
-      toggle.addEventListener('click', function () { setPanel(true); });
-      $('panelClose').addEventListener('click', function () { setPanel(false); });
+      toggle.addEventListener('click', function () { setPanel(panel.hidden); });
+      setPanel(!window.matchMedia('(max-width: 600px)').matches);
 
       document.addEventListener('keydown', function (e) {
-        if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+        if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key === 'Escape') {
+          if (!panel.hidden) { e.preventDefault(); setPanel(false); }
+          return;
+        }
+        if (e.target instanceof Element && e.target.closest('input, textarea, select, button, summary, [contenteditable="true"]')) return;
         var k = e.key.toLowerCase();
-        if (k === 'h') { setPanel(panel.classList.contains('collapsed')); }
-        else if (k === 'd') { hooks.onDrop(); }
-        else if (k === 'c') { hooks.onClear(); }
+        if (k === 'h') { e.preventDefault(); setPanel(panel.hidden); }
+        else if (k === 'd') { e.preventDefault(); hooks.onDrop(); }
+        else if (k === 'c') { e.preventDefault(); hooks.onClear(); }
         else if (e.code === 'Space') { e.preventDefault(); btnPause.click(); }
       });
 
       applyColours();
-      initLyrics();
     },
 
     setRecording: function (on) {
-      btnRec.textContent = on ? 'Stop' : 'Record';
+      btnRec.textContent = on ? 'Stop recording' : 'Record video';
       btnRec.classList.toggle('active', on);
+      btnRec.setAttribute('aria-pressed', String(on));
       recDot.hidden = !on;
     },
 
-    /** Refreshes the recording read-out and the playback clock once per frame. */
+    /** Refreshes the recording read-out once per frame. */
     tick: function () {
       if (RTG.Exporter.isRecording()) {
         var e = Math.floor(RTG.Exporter.elapsed());
         recTime.textContent = formatClock(e);
-      }
-
-      if (RTG.Player.isReady() && RTG.Player.playing()) {
-        var sec = Math.floor(RTG.Player.time());
-        if (sec !== lastShownSecond) {
-          lastShownSecond = sec;
-          lyricStatus.classList.remove('bad');
-          lyricStatus.textContent = formatClock(sec) + ' / ' + formatClock(RTG.Player.duration());
-        }
       }
     }
   };

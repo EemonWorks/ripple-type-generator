@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ripple rendering checks</title>
+  <style>
+    body { margin: 24px; background: #edf0f4; color: #172137; font: 14px system-ui, sans-serif; }
+    #results { white-space: pre-wrap; line-height: 1.7; }
+    #previews { display: flex; flex-wrap: wrap; gap: 16px; }
+    figure { margin: 0; }
+    figcaption { padding: 8px 0; }
+    canvas { width: 320px; height: 400px; background: white; }
+    .fixture { position: absolute; left: -10000px; width: 960px; height: 900px; }
+  </style>
+</head>
+<body>
+  <h1>Ripple rendering checks</h1>
+  <p>Runs against the actual Canvas renderer and generator controls. No packages required.</p>
+  <pre id="results">Loading generator...</pre>
+  <div id="previews"></div>
+  <script src="rendering.test.js"></script>
+</body>
+</html>

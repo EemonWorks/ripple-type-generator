@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RIPPLE TYPE GENERATOR</title>
 <meta name="description" content="A kinetic type generator: droplets fall, bloom into words, and leave interfering ripples.">
 
@@ -14,129 +14,143 @@
 </head>
 <body>
 
-<canvas id="stage"></canvas>
+<canvas id="stage" aria-label="Animated word ripples. Click to place a drop."></canvas>
 
-<aside id="panel">
-  <header class="panel-head">
-    <div>
-      <h1>RIPPLE TYPE GENERATOR</h1>
-      <h2>_v.water</h2>
-    </div>
-    <button id="panelClose" type="button" aria-label="Hide controls">&minus;</button>
-  </header>
+<aside id="controlRail" aria-label="Generator controls">
+  <div class="rail-spine">
+    <button id="panelToggle" type="button" aria-label="Collapse controls" aria-controls="panel" aria-expanded="true" title="Collapse controls (H)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>
+    </button>
+    <span class="rail-brand" aria-hidden="true">RIPPLE TYPE</span>
+    <kbd title="Press H to toggle controls">H</kbd>
+  </div>
 
-  <div class="panel-body">
+  <div id="panel">
+    <header class="panel-head">
+      <h1>Ripple type</h1>
+      <p>Words in motion.</p>
+    </header>
 
-    <div class="field">
-      <label for="words">Words <span class="hint">one per line</span></label>
-      <textarea id="words" rows="4" spellcheck="false">ERASE
+    <div class="panel-body">
+      <details class="control-group" open>
+        <summary>Words</summary>
+        <div class="group-body">
+          <label class="field-label" for="words">Your words</label>
+          <textarea id="words" rows="3" spellcheck="false" autocapitalize="off" aria-describedby="wordsHint">ERASE
 EXPAND
 ERUPT</textarea>
+          <p class="hint" id="wordsHint">One per line or comma separated. Your capitalization is preserved.</p>
+        </div>
+      </details>
+
+      <details class="control-group" open>
+        <summary>Finish &amp; colour</summary>
+        <div class="group-body">
+          <div class="field">
+            <label for="preset">Preset</label>
+            <select id="preset">
+              <option value="reference">Reference blue</option>
+              <option value="cobalt">Cobalt paper &mdash; ink blur</option>
+              <option value="midnight">Midnight</option>
+              <option value="ink">Ink on bone</option>
+              <option value="acid">Acid</option>
+              <option value="rust">Rust</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="finish">Finish</label>
+            <select id="finish">
+              <option value="glow">Glow &amp; soft lines</option>
+              <option value="diffuse">Diffused ink</option>
+            </select>
+          </div>
+          <div class="sliders" id="glowControls">
+            <div class="slider"><label for="glow">Glow</label><input type="range" id="glow" min="0" max="1.2" step="0.01" value="0.45"><output for="glow"></output></div>
+            <div class="slider"><label for="soften">Ring blur</label><input type="range" id="soften" min="0" max="1" step="0.01" value="0.12"><output for="soften"></output></div>
+          </div>
+          <div id="inkControls" hidden>
+            <div class="sliders">
+              <div class="slider"><label for="inkBlur">Ink blur</label><input type="range" id="inkBlur" min="0" max="1" step="0.01" value="0.4"><output for="inkBlur"></output></div>
+              <div class="slider"><label for="inkSpread">Ink spread</label><input type="range" id="inkSpread" min="0" max="1" step="0.01" value="0.3"><output for="inkSpread"></output></div>
+            </div>
+            <p class="hint">Soft colour bleed. Grain stays still like paper.</p>
+          </div>
+          <div class="sliders grain-control">
+            <div class="slider"><label for="grain">Grain</label><input type="range" id="grain" min="0" max="0.2" step="0.005" value="0.055"><output for="grain"></output></div>
+          </div>
+          <div class="colours">
+            <label class="swatch">Water <input type="color" id="bgColor" value="#5e9de0"></label>
+            <label class="swatch">Ink <input type="color" id="inkColor" value="#f0f5fd"></label>
+          </div>
+        </div>
+      </details>
+
+      <details class="control-group">
+        <summary>Rings</summary>
+        <div class="group-body sliders">
+          <div class="slider"><label for="lineWeight">Line weight</label><input type="range" id="lineWeight" min="0.25" max="6" step="0.25" value="1"><output for="lineWeight"></output></div>
+          <div class="slider"><label for="ringCount">Rings per drop</label><input type="range" id="ringCount" min="1" max="9" step="1" value="4"><output for="ringCount"></output></div>
+          <div class="slider"><label for="rippleSpread">Ripple spread</label><input type="range" id="rippleSpread" min="0.3" max="2.5" step="0.02" value="1"><output for="rippleSpread"></output></div>
+          <div class="slider"><label for="breaks">Breaks</label><input type="range" id="breaks" min="0" max="1" step="0.01" value="0.25"><output for="breaks"></output></div>
+          <div class="slider"><label for="interference">Interference</label><input type="range" id="interference" min="0" max="2.5" step="0.02" value="1"><output for="interference"></output></div>
+        </div>
+      </details>
+
+      <details class="control-group">
+        <summary>Typography</summary>
+        <div class="group-body">
+          <div class="field">
+            <label for="fontFace">Typeface</label>
+            <select id="fontFace">
+              <option value="inter">Inter</option>
+              <option value="poppins">Poppins</option>
+              <option value="grotesk">Space Grotesk</option>
+              <option value="bebas">Bebas Neue (all caps)</option>
+              <option value="anton">Anton</option>
+              <option value="plexmono">IBM Plex Mono</option>
+              <option value="playfair">Playfair Display</option>
+            </select>
+          </div>
+          <div class="sliders">
+            <div class="slider"><label for="typeSize">Type size</label><input type="range" id="typeSize" min="0.4" max="2.2" step="0.02" value="1"><output for="typeSize"></output></div>
+            <div class="slider"><label for="typeTilt">Lay flat</label><input type="range" id="typeTilt" min="0" max="1" step="0.01" value="0"><output for="typeTilt"></output></div>
+          </div>
+          <label class="check"><input type="checkbox" id="sharpType" checked>Keep words sharp</label>
+          <div class="slider text-blur-control">
+            <label for="textBlur">Text blur</label>
+            <input type="range" id="textBlur" min="0" max="1" step="0.01" value="0.15" aria-describedby="textBlurHint">
+            <output for="textBlur"></output>
+          </div>
+          <p class="hint" id="textBlurHint">Turn off Keep words sharp to adjust. Independent of ring blur in both finishes.</p>
+        </div>
+      </details>
+
+      <details class="control-group">
+        <summary>Motion &amp; camera</summary>
+        <div class="group-body sliders">
+          <div class="slider"><label for="dropRate">Drop interval</label><input type="range" id="dropRate" min="0.25" max="6" step="0.05" value="1.5"><output for="dropRate"></output></div>
+          <div class="slider"><label for="fallSpeed">Fall speed</label><input type="range" id="fallSpeed" min="0.2" max="4" step="0.05" value="1"><output for="fallSpeed"></output></div>
+          <div class="slider"><label for="rippleSpeed">Ripple speed</label><input type="range" id="rippleSpeed" min="0.2" max="3" step="0.02" value="1"><output for="rippleSpeed"></output></div>
+          <div class="slider"><label for="tilt">Surface tilt</label><input type="range" id="tilt" min="6" max="60" step="0.5" value="15"><output for="tilt"></output></div>
+          <div class="slider"><label for="bow">Perspective bow</label><input type="range" id="bow" min="0" max="1" step="0.01" value="0.72"><output for="bow"></output></div>
+        </div>
+      </details>
     </div>
 
-    <div class="field">
-      <label for="preset">Preset</label>
-      <select id="preset">
-        <option value="reference">Reference blue</option>
-        <option value="midnight">Midnight</option>
-        <option value="ink">Ink on bone</option>
-        <option value="acid">Acid</option>
-        <option value="rust">Rust</option>
-      </select>
-    </div>
-
-    <div class="group-label">Water</div>
-    <div class="sliders">
-      <div class="slider"><label for="dropRate">Drop rate</label><input type="range" id="dropRate" min="0.25" max="6" step="0.05" value="1.5"><output for="dropRate"></output></div>
-      <div class="slider"><label for="fallSpeed">Fall speed</label><input type="range" id="fallSpeed" min="0.2" max="4" step="0.05" value="1"><output for="fallSpeed"></output></div>
-      <div class="slider"><label for="rippleSpeed">Ripple speed</label><input type="range" id="rippleSpeed" min="0.2" max="3" step="0.02" value="1"><output for="rippleSpeed"></output></div>
-      <div class="slider"><label for="rippleSpread">Ripple spread</label><input type="range" id="rippleSpread" min="0.3" max="2.5" step="0.02" value="1"><output for="rippleSpread"></output></div>
-      <div class="slider"><label for="ringCount">Rings per drop</label><input type="range" id="ringCount" min="1" max="9" step="1" value="4"><output for="ringCount"></output></div>
-      <div class="slider"><label for="breaks">Breaks</label><input type="range" id="breaks" min="0" max="1" step="0.01" value="0.25"><output for="breaks"></output></div>
-      <div class="slider"><label for="interference">Interference</label><input type="range" id="interference" min="0" max="2.5" step="0.02" value="1"><output for="interference"></output></div>
-    </div>
-
-    <div class="group-label">Lyrics <span class="hint">optional</span></div>
-
-    <div class="field">
-      <label for="ytUrl">YouTube link</label>
-      <div class="row">
-        <input type="text" id="ytUrl" placeholder="youtu.be/&hellip;" spellcheck="false">
-        <button type="button" id="btnLoadYt">Load</button>
+    <footer class="rail-footer">
+      <div class="buttons">
+        <button type="button" id="btnDrop" class="primary" title="Add a drop (D)">Drop</button>
+        <button type="button" id="btnPause" aria-pressed="false" title="Pause animation (Space)">Pause</button>
+        <button type="button" id="btnClear" title="Clear the water (C)">Clear</button>
       </div>
-    </div>
-
-    <div class="yt-host" id="ytHost"></div>
-
-    <div class="field">
-      <label for="capFile">Captions <span class="hint">.srt .vtt .lrc</span></label>
-      <input type="file" id="capFile" accept=".srt,.vtt,.lrc,.txt,text/plain">
-    </div>
-
-    <div class="field">
-      <label for="lyricGrain">Drop as</label>
-      <select id="lyricGrain">
-        <option value="word">One word at a time</option>
-        <option value="phrase">Short phrases</option>
-      </select>
-    </div>
-
-    <div class="buttons compact">
-      <button type="button" id="btnPlay">Play</button>
-      <button type="button" id="btnLyricsClear">Unload</button>
-    </div>
-
-    <p class="slug" id="lyricStatus">Drop a caption or audio file anywhere on the page.</p>
-
-    <div class="group-label">Type</div>
-    <div class="field">
-      <select id="fontFace">
-        <option value="inter">Inter &mdash; neo-grotesque</option>
-        <option value="poppins">Poppins &mdash; geometric</option>
-        <option value="grotesk">Space Grotesk</option>
-        <option value="bebas">Bebas Neue &mdash; condensed</option>
-        <option value="anton">Anton &mdash; heavy</option>
-        <option value="plexmono">IBM Plex Mono</option>
-        <option value="playfair">Playfair &mdash; serif</option>
-      </select>
-    </div>
-    <div class="sliders">
-      <div class="slider"><label for="typeSize">Size</label><input type="range" id="typeSize" min="0.4" max="2.2" step="0.02" value="1"><output for="typeSize"></output></div>
-      <div class="slider"><label for="typeTilt">Lay flat</label><input type="range" id="typeTilt" min="0" max="1" step="0.01" value="0"><output for="typeTilt"></output></div>
-    </div>
-
-    <div class="group-label">Camera</div>
-    <div class="sliders">
-      <div class="slider"><label for="tilt">Tilt</label><input type="range" id="tilt" min="6" max="60" step="0.5" value="15"><output for="tilt"></output></div>
-      <div class="slider"><label for="bow">Bow</label><input type="range" id="bow" min="0" max="1" step="0.01" value="0.72"><output for="bow"></output></div>
-    </div>
-
-    <div class="group-label">Light</div>
-    <div class="sliders">
-      <div class="slider"><label for="glow">Glow</label><input type="range" id="glow" min="0" max="1.2" step="0.01" value="0.45"><output for="glow"></output></div>
-      <div class="slider"><label for="soften">Soften</label><input type="range" id="soften" min="0" max="1" step="0.01" value="0.12"><output for="soften"></output></div>
-      <div class="slider"><label for="grain">Grain</label><input type="range" id="grain" min="0" max="0.2" step="0.005" value="0.055"><output for="grain"></output></div>
-    </div>
-
-    <div class="group-label">Colour</div>
-    <div class="colours">
-      <label class="swatch">Water <input type="color" id="bgColor" value="#5e9de0"></label>
-      <label class="swatch">Ink <input type="color" id="inkColor" value="#f0f5fd"></label>
-    </div>
-
-    <div class="buttons">
-      <button type="button" id="btnDrop">Drop</button>
-      <button type="button" id="btnPause">Pause</button>
-      <button type="button" id="btnClear">Clear</button>
-      <button type="button" id="btnPng">PNG</button>
-      <button type="button" id="btnRec">Record</button>
-    </div>
-
-    <p class="slug">Click the water to place a drop. <br>H panel &middot; D drop &middot; C clear &middot; Space pause</p>
+      <div class="buttons export-buttons">
+        <button type="button" id="btnPng">Save PNG</button>
+        <button type="button" id="btnRec" aria-pressed="false">Record video</button>
+      </div>
+      <p class="hint">Click the water to place a drop.</p>
+    </footer>
   </div>
 </aside>
-
-<button id="panelToggle" type="button" aria-label="Show controls">&#9776;</button>
 
 <div id="recDot" hidden><span></span>REC <em id="recTime">0:00</em></div>
 
@@ -145,10 +159,9 @@ ERUPT</textarea>
 <script src="js/field.js"></script>
 <script src="js/ripple.js"></script>
 <script src="js/droplet.js"></script>
+<script src="js/blur.js"></script>
 <script src="js/render.js"></script>
 <script src="js/export.js"></script>
-<script src="js/player.js"></script>
-<script src="js/lyrics.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/main.js"></script>
 </body>

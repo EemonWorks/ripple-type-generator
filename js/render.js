@@ -164,46 +164,28 @@
 
   /* ---------------- glow layers ---------------- */
 
-  var art = null, artCtx = null;
-  var blur = null, blurCtx = null;
-
-  /** Canvas filters are widely but not universally supported; downscaling is the fallback. */
-  var canFilter = (function () {
-    try {
-      var probe = document.createElement('canvas').getContext('2d');
-      probe.filter = 'blur(2px)';
-      return probe.filter === 'blur(2px)';
-    } catch (e) {
-      return false;
-    }
-  })();
-
-  function ensureArt(W, H, devW, devH, dpr) {
-    if (!art) {
-      art = document.createElement('canvas');
-      artCtx = art.getContext('2d');
-    }
-    if (art.width !== devW || art.height !== devH) {
-      art.width = devW;
-      art.height = devH;
-    }
-    artCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    artCtx.clearRect(0, 0, W, H);
-    return art;
+  function createSurface() {
+    var canvas = document.createElement('canvas');
+    return { canvas: canvas, ctx: canvas.getContext('2d') };
   }
 
-  function ensureBlur(w, h) {
-    if (!blur) {
-      blur = document.createElement('canvas');
-      blurCtx = blur.getContext('2d');
+  var art = createSurface();
+  var textArt = createSurface();
+  var glowLayers = [RTG.Blur.create(), RTG.Blur.create(), RTG.Blur.create()];
+  var softLayer = RTG.Blur.create();
+  var inkLayer = RTG.Blur.create();
+  var textLayer = RTG.Blur.create();
+  var words = [];
+
+  function prepareSurface(surface, W, H, devW, devH, dpr) {
+    if (surface.canvas.width !== devW || surface.canvas.height !== devH) {
+      surface.canvas.width = devW;
+      surface.canvas.height = devH;
     }
-    if (blur.width !== w || blur.height !== h) {
-      blur.width = w;
-      blur.height = h;
-    }
-    blurCtx.setTransform(1, 0, 0, 1, 0, 0);
-    blurCtx.clearRect(0, 0, w, h);
-    return blur;
+    surface.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    surface.ctx.globalAlpha = 1;
+    surface.ctx.globalCompositeOperation = 'source-over';
+    surface.ctx.clearRect(0, 0, W, H);
   }
 
   function luminance(hex) {
@@ -214,37 +196,19 @@
     return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255;
   }
 
-  /**
-   * Additive bloom. The art is reduced before blurring, which is both much cheaper than
-   * blurring at full resolution and most of the blur itself. Two octaves are summed: a
-   * tight halo that hugs the stroke, and a wide one for the soft falloff.
-   *
-   * Light ink on dark water blooms additively. Dark ink on a pale preset has to darken
-   * instead, or `lighter` would wash the glow out to nothing.
-   */
   function drawGlow(ctx, source, devW, devH, amount, p) {
-    // Three octaves: a tight halo hugging the stroke, a mid spread, and a wide soft
-    // wash. Summing widely separated radii is what gives a bloom its long falloff --
-    // a single blur just looks like a thicker line.
     var octaves = [
-      { scale: 0.25, radius: devH * 0.008, weight: 1 },
-      { scale: 0.10, radius: devH * 0.016, weight: 0.7 },
-      { scale: 0.04, radius: devH * 0.030, weight: 0.45 }
+      { radius: devH * 0.008, weight: 1 },
+      { radius: devH * 0.016, weight: 0.7 },
+      { radius: devH * 0.030, weight: 0.45 }
     ];
 
     ctx.globalCompositeOperation = luminance(p.ink) >= luminance(p.bg) ? 'lighter' : 'multiply';
 
     for (var i = 0; i < octaves.length; i++) {
       var o = octaves[i];
-      var w = Math.max(1, Math.round(devW * o.scale));
-      var h = Math.max(1, Math.round(devH * o.scale));
-
-      var b = ensureBlur(w, h);
-      blurCtx.filter = canFilter ? 'blur(' + (o.radius * o.scale).toFixed(2) + 'px)' : 'none';
-      blurCtx.drawImage(source, 0, 0, w, h);
-      blurCtx.filter = 'none';
-
-      ctx.globalAlpha = amount * o.weight;
+      var b = glowLayers[i].render(source, devW, devH, o.radius, p.ink);
+      ctx.globalAlpha = Math.min(1, amount * o.weight);
       ctx.drawImage(b, 0, 0, devW, devH);
     }
 
@@ -253,7 +217,7 @@
   }
 
   /** Lays the art down, optionally softened. */
-  function drawArtLayer(ctx, source, devW, devH, radius) {
+  function drawArtLayer(ctx, source, devW, devH, radius, ink) {
     ctx.globalAlpha = 1;
 
     if (radius < 0.4) {
@@ -261,19 +225,7 @@
       return;
     }
 
-    if (canFilter) {
-      ctx.filter = 'blur(' + radius.toFixed(2) + 'px)';
-      ctx.drawImage(source, 0, 0, devW, devH);
-      ctx.filter = 'none';
-      return;
-    }
-
-    // Without canvas filters, a round trip through a smaller canvas softens the edges.
-    var f = 1 / (1 + radius * 0.6);
-    var w = Math.max(1, Math.round(devW * f));
-    var h = Math.max(1, Math.round(devH * f));
-    var b = ensureBlur(w, h);
-    blurCtx.drawImage(source, 0, 0, w, h);
+    var b = softLayer.render(source, devW, devH, radius, ink);
     ctx.drawImage(b, 0, 0, devW, devH);
   }
 
@@ -321,27 +273,33 @@
     // free of background-coloured blobs, which would otherwise bloom as coloured
     // smudges in the glow pass. The backdrop shows through the hole either way.
     ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = '#000';
     ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
     ctx.stroke();
 
+    words.push({ source: src, x: b.cx, y: b.cy, width: b.w, alpha: wa });
+  }
+
+  function drawWord(ctx, src, x, y, width, alpha, p) {
     var Type = RTG.Type;
     var fs = src.fsPx;
-    var room = b.w - src.fsPx * 0.85;
+    var room = width - src.fsPx * 0.85;
     var tw = Type.measure(ctx, src.word, fs);
     if (room > 4 && tw > room) fs *= room / tw;
 
+    ctx.globalAlpha = alpha;
     ctx.fillStyle = p.ink;
 
     if (src.typeSquash < 0.999) {
       // Squashing vertically lays the word down into the water plane.
       ctx.save();
-      ctx.translate(b.cx, b.cy);
+      ctx.translate(x, y);
       ctx.scale(1, src.typeSquash);
       Type.draw(ctx, src.word, fs, 0, 0);
       ctx.restore();
     } else {
-      Type.draw(ctx, src.word, fs, b.cx, b.cy);
+      Type.draw(ctx, src.word, fs, x, y);
     }
   }
 
@@ -388,6 +346,10 @@
   var Render = {
     frame: function (ctx, W, H, t, p, devW, devH) {
       var dpr = devW / W;
+      var diffuse = p.finish === 'diffuse';
+      var shortSide = Math.min(W, H);
+      var textRadius = p.sharpType ? 0 : (p.textBlur || 0) * 0.025 * shortSide * dpr;
+      words.length = 0;
 
       backdrop(ctx, W, H, p);
 
@@ -395,8 +357,8 @@
 
       // The line art is always composed on its own transparent layer, so the capsule
       // masks can cut holes and the glow pass has clean ink to work from.
-      ensureArt(W, H, devW, devH, dpr);
-      var a = artCtx;
+      prepareSurface(art, W, H, devW, devH, dpr);
+      var a = art.ctx;
 
       // Far to near, so nearer capsules mask the ripples behind them.
       var list = RTG.Ripples.list;
@@ -408,6 +370,8 @@
       a.lineCap = 'round';
       a.strokeStyle = p.ink;
       a.lineWidth = RTG.util.clamp(0.0024 * H, 1.25, 7);
+      if (diffuse) a.lineWidth += shortSide * 0.065 * p.inkSpread;
+      a.lineWidth *= p.lineWeight == null ? 1 : p.lineWeight;
 
       for (var j = 0; j < order.length; j++) {
         drawSource(a, list[order[j]], order[j], t, p);
@@ -418,12 +382,38 @@
       // Composite in device pixels so blur radii mean the same thing at any DPR.
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      if ((p.glow || 0) > 0.01) drawGlow(ctx, art, devW, devH, p.glow, p);
-      drawArtLayer(ctx, art, devW, devH, (p.soften || 0) * 0.018 * devH);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      if (diffuse) {
+        // Coloured coverage on paper, not additive light; there is no crisp stroke
+        // redrawn on top. Wider ink bands keep the colour rich as the blur expands.
+        var radius = p.inkBlur * 0.04 * shortSide * dpr;
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(inkLayer.render(art.canvas, devW, devH, radius, p.ink), 0, 0, devW, devH);
+      } else {
+        if ((p.glow || 0) > 0.01) drawGlow(ctx, art.canvas, devW, devH, p.glow, p);
+        drawArtLayer(ctx, art.canvas, devW, devH, (p.soften || 0) * 0.018 * devH, p.ink);
+      }
       ctx.restore();
 
       ctx.globalAlpha = 1;
-      RTG.Grain.apply(ctx, devW, devH, p.grain);
+      RTG.Grain.apply(ctx, devW, devH, p.grain, diffuse || p.paused);
+      // Text has its own coverage layer: changing ring glow or diffusion never
+      // changes its blur, and Keep words sharp bypasses this pass entirely.
+      if (words.length && textRadius > 0) prepareSurface(textArt, W, H, devW, devH, dpr);
+      for (var wi = 0; wi < words.length; wi++) {
+        var word = words[wi];
+        drawWord(textRadius > 0 ? textArt.ctx : ctx, word.source, word.x, word.y, word.width, word.alpha, p);
+      }
+      if (words.length && textRadius > 0) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.drawImage(textLayer.render(textArt.canvas, devW, devH, textRadius, p.ink), 0, 0, devW, devH);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
     }
   };
 

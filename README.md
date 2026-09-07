@@ -12,7 +12,7 @@ Open `index.html`. That is the whole thing — double-clicking the file works, b
 scripts are classic `<script>` tags rather than ES modules (`file://` blocks module
 imports).
 
-For development with live reload of edits, any static server will do:
+For development, any static server will do; refresh the browser after edits:
 
 ```sh
 python3 -m http.server 8777
@@ -21,69 +21,52 @@ python3 -m http.server 8777
 
 ## Controls
 
-Click anywhere on the water to place a drop by hand.
+Click anywhere on the water to place a drop by hand. Controls live in a collapsible
+rail attached to the left edge. Use its arrow or `H` to collapse/expand it; `Escape`
+closes it. The narrow spine stays visible, and your settings are preserved.
+On small screens the rail starts collapsed.
+
+Words, finish/colour, rings, typography, and motion/camera are separate collapsible
+sections. Each slider has its label and value above a monochrome segmented track.
+The sliders still support dragging, touch, and keyboard arrows. Drop, pause, clear,
+and export actions stay at the bottom while settings scroll.
 
 | Key | Action |
 |---|---|
-| `H` | show/hide the panel |
+| `H` | expand/collapse the control rail |
+| `Escape` | collapse the control rail |
 | `D` | drop now |
 | `C` | clear |
 | `Space` | pause |
 
 **Words** — one per line, or comma separated. They cycle in order, one per droplet.
-
-**Lyrics** — play a track and let its words fall in time with it. See below.
+Capitalization is preserved: `Rain`, `rain`, and `rAiN` remain different. Some display
+fonts, such as Bebas Neue, use all-capital glyph designs regardless of input.
 
 **Water** — drop rate, fall speed, ripple speed, ripple spread, rings per drop,
-**breaks** (frays the rings into open arcs), and **interference**.
+**line weight** (0.25x to 6x in either finish), **breaks** (frays the rings into open
+arcs), and **interference**. Line weight affects the rings and word capsules, not
+the font size or droplet diameter.
 
-**Type** — typeface, size, and **lay flat**, which tips the word from upright into the
-plane of the water.
+**Typography** — typeface, size, and **lay flat**, which tips the word from upright into
+the plane of the water. **Keep words sharp** overrides text blur. Turn it off to enable
+the separate **Text blur** slider, which works independently of ring blur in both
+finishes. Zero gives crisp text; higher values soften only the words.
 
 **Camera** — tilt and bow.
 
-**Light** — **glow** (bloom around the strokes), **soften** (blurs the line art), and
-grain.
+**Finish & colour** — choose **Glow & soft lines** or **Diffused ink**. The original
+finish has **Glow** and **Ring blur** sliders. Diffused ink has **Ink blur** for the soft
+edge and **Ink spread** for the width of the coloured bands. **Grain** controls texture.
+
+Choose the **Cobalt paper — ink blur** preset for blue, softly diffused rings on
+off-white paper. It sets the ink finish, blur, spread and grain together without
+changing your words, camera, line weight or text blur settings. Higher spread/weight creates
+denser overlapping ink; lower values keep more space between rings. Paper grain
+stays stationary rather than flickering over the moving shapes.
 
 **Export** — `PNG` saves a still. `Record` captures WebM (or MP4 in browsers that only
 support it) via `MediaRecorder`.
-
-## Lyrics mode
-
-Paste a YouTube link and press **Load**, then supply a caption file — drop a `.srt`,
-`.vtt` or `.lrc` anywhere on the page, or use the file picker. Press **Play** and each
-word falls in time with the track. Dropping an audio file (`.mp3`, `.m4a`, `.wav`, …)
-plays that locally instead of YouTube.
-
-**Captions have to be supplied; they cannot be fetched.** There is no way for a web page
-to read a YouTube video's caption text:
-
-- the IFrame Player API exposes no caption methods at all,
-- the undocumented `/api/timedtext` endpoint sends no CORS headers, so the browser
-  blocks it,
-- and the official Captions API only covers videos you own.
-
-Any automatic fetch would need a server-side proxy, which would mean this stopped being
-a static page you can open from disk. So the track plays from YouTube and the words come
-from a file you provide.
-
-Supported formats, auto-detected:
-
-| Format | Notes |
-|---|---|
-| SubRip `.srt` | words spread evenly across each cue |
-| WebVTT `.vtt` | karaoke cues with inline `<00:00:12.500>` marks give true per-word timing |
-| LRC `.lrc` | `[mm:ss.xx]` line tags |
-| plain text | untimed — words spread evenly across the track's duration |
-
-**Drop as** switches between one word per ripple and short phrases, which stays readable
-when a song moves faster than a ripple can bloom.
-
-A droplet takes time to fall, so each word is released early by exactly the fall
-duration and back-dated by however late the current frame is. The word therefore *lands*
-on its timestamp rather than starting to fall on it. Scrubbing the player resyncs
-instead of dumping the backlog on screen, dense passages are rate-limited so they cannot
-flood the canvas, and words the scheduler is hopelessly late on are discarded.
 
 ## How it works
 
@@ -170,35 +153,37 @@ The field is `O(vertices × rings)`, kept cheap with a squared-distance reject b
 `sqrt`, `cos` or `exp`. A 26 second run at 1080×1350 measures 0.97 ms mean and 2.97 ms
 worst-case per frame, against a 16.7 ms budget for 60 fps.
 
-### Glow
+### Blur finishes
 
 The line art is composed on its own transparent layer rather than straight onto the
 water. Word capsules cut their hole with `destination-out` instead of filling with the
 background colour — otherwise the glow pass would pick up background-coloured discs and
 bloom them as coloured smudges.
 
-The bloom sums three blurred copies at widely separated radii: a tight halo hugging the
-stroke, a mid spread, and a wide soft wash. One blur alone just reads as a thicker line;
-it is the separation of radii that produces a long, soft falloff. Each copy is reduced
-before being blurred, which is both far cheaper than blurring at full resolution and
-most of the blur itself.
+Both finishes use `js/blur.js`: a reusable alpha-mask blur with three separable box
+passes approximating a Gaussian. It blurs actual coverage, then tints that coverage
+with the ink colour. This avoids dark transparent fringes and does not rely on
+Canvas `filter` support. Assigning a filter string can appear to succeed in browsers
+that merely store it as a JavaScript property without applying any blur.
 
-Light ink on dark water blooms additively with `lighter`. A dark-ink preset on pale
-water switches to `multiply`, since adding light to an already-bright background would
-wash the glow away to nothing.
+Glow combines three blur radii with additive compositing for light ink and multiply
+for dark ink. Diffused ink instead broadens the ring strokes and composites only
+the blurred result with `source-over`. It does not put a crisp line or bright core
+back on top, so the colour spreads like ink rather than neon light.
 
-Compositing happens with the transform reset to identity, so a blur radius means the
-same thing regardless of device pixel ratio. Canvas filters are used where available,
-with a downscale-and-upscale round trip as the fallback.
+The blur runs on reduced-resolution coverage buffers, with enough samples to resolve
+the kernel. Buffers are reused across frames and resized when needed. Radius and
+line weight scale with the artwork, including high-DPI displays and exports.
 
-Measured at 2084×1778 with a GPU sync each frame: 2.72 ms with glow off, 5.15 ms at the
-default settings, against a 16.7 ms budget for 60 fps.
+Grain is applied after compositing, so it remains fine instead of being blurred
+with the rings. It is stationary in the ink finish and whenever animation is paused.
+Text always has a separate rendering pass so its blur amount is independent of the
+ring finish. **Keep words sharp** bypasses the text-blur pass entirely.
 
 ### Other details
 
-- Word capsules never expand, so words stay legible at any ripple setting. They are
-  filled with water before stroking, which hides sub-capsule rings and lets a nearer
-  capsule correctly mask the ripples behind it.
+- Word capsules never expand. They mask underlying rings before the finish is applied;
+  the separate sharp-text pass keeps words readable without a glowing outline.
 - Rings run from the capsule rim outward, not from zero — the capsule can occupy well
   over half the map radius, so starting at zero would hide most rings inside it.
 - Word text is drawn flat in screen space by default, matching the reference, where the
@@ -213,6 +198,15 @@ default settings, against a 16.7 ms budget for 60 fps.
 - Grain is a noise tile composited at low alpha, matching the reference print's measured
   luminance sigma of about 2.5.
 
+## Rendering checks
+
+With the static server running, open `http://127.0.0.1:8777/tests/rendering.html`.
+The dependency-free browser checks exercise real canvas pixels, blur falloff and
+colour, stationary grain, line weight, sharp text in both finishes, controls,
+high-DPI output, resizing, click-to-drop, mixed-case words, rail accessibility,
+independent text blur and PNG round trips.
+The page also displays example renders for visual comparison.
+
 ## Layout
 
 ```
@@ -222,11 +216,11 @@ js/camera.js    the water plane and its projection
 js/field.js     shared wave-height field
 js/ripple.js    sources, ring lifecycle, typefaces
 js/droplet.js   falling droplets and their strobe trails
+js/blur.js      reusable, browser-independent ink coverage blur
 js/render.js    drawing, ring breaks, interference smoothing
 js/grain.js      riso grain
 js/controls.js   parameter state and panel wiring
 js/export.js     PNG and WebM capture
-js/player.js     YouTube embed and local audio playback
-js/lyrics.js     caption parsing and drop scheduling
 js/main.js       boot, resize, scheduling, animation loop
+tests/rendering.html   browser rendering checks and visual comparisons
 ```

@@ -36,11 +36,6 @@
     list: [],
     TRAIL: TRAIL,
 
-    /** How long a droplet takes to land. Lyric drops are released this far early. */
-    fallDuration: function (p) {
-      return BASE_FALL / Math.max(0.05, p.fallSpeed);
-    },
-
     spawn: function (ax, ay, word, t, p) {
       var d = new Droplet(ax, ay, word, t, p);
       this.list.push(d);
