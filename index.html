@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 
 <link rel="preload" href="assets/fonts/ms-sans-serif/regular/font.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="styles.css?v=welcome-1">
+<link rel="stylesheet" href="styles.css?v=approved-defaults-1">
 </head>
 <body>
 
@@ -48,9 +48,10 @@
         <summary>Words</summary>
         <div class="group-body">
           <label class="field-label" for="words">Your words</label>
-          <textarea id="words" rows="3" spellcheck="false" autocapitalize="off" aria-describedby="wordsHint">ERASE
-EXPAND
-ERUPT</textarea>
+          <textarea id="words" rows="3" spellcheck="false" autocapitalize="off" aria-describedby="wordsHint">Anchored
+Arduos
+Ageless
+Abiding</textarea>
           <p class="hint" id="wordsHint">One per line or comma separated. Your capitalization is preserved.</p>
         </div>
       </details>
@@ -61,6 +62,7 @@ ERUPT</textarea>
           <div class="field">
             <label for="preset">Preset</label>
             <select id="preset">
+              <option value="default">Default artwork</option>
               <option value="reference">Reference blue</option>
               <option value="cobalt">Cobalt paper &mdash; ink blur</option>
               <option value="midnight">Midnight</option>
@@ -77,22 +79,22 @@ ERUPT</textarea>
             </select>
           </div>
           <div class="sliders" id="glowControls">
-            <div class="slider"><label for="glow">Glow</label><input type="range" id="glow" min="0" max="1.2" step="0.01" value="0.45"><output for="glow"></output></div>
-            <div class="slider"><label for="soften">Ring blur</label><input type="range" id="soften" min="0" max="1" step="0.01" value="0.12"><output for="soften"></output></div>
+            <div class="slider"><label for="glow">Glow</label><input type="range" id="glow" min="0" max="1.2" step="0.01" value="0.08"><output for="glow"></output></div>
+            <div class="slider"><label for="soften">Ring blur</label><input type="range" id="soften" min="0" max="1" step="0.01" value="0.21"><output for="soften"></output></div>
           </div>
           <div id="inkControls" hidden>
             <div class="sliders">
-              <div class="slider"><label for="inkBlur">Ink blur</label><input type="range" id="inkBlur" min="0" max="1" step="0.01" value="0.4"><output for="inkBlur"></output></div>
-              <div class="slider"><label for="inkSpread">Ink spread</label><input type="range" id="inkSpread" min="0" max="1" step="0.01" value="0.3"><output for="inkSpread"></output></div>
+              <div class="slider"><label for="inkBlur">Ink blur</label><input type="range" id="inkBlur" min="0" max="1" step="0.01" value="0.2"><output for="inkBlur"></output></div>
+              <div class="slider"><label for="inkSpread">Ink spread</label><input type="range" id="inkSpread" min="0" max="1" step="0.01" value="0.04"><output for="inkSpread"></output></div>
             </div>
             <p class="hint">Soft colour bleed. Grain stays still like paper.</p>
           </div>
           <div class="sliders grain-control">
-            <div class="slider"><label for="grain">Grain</label><input type="range" id="grain" min="0" max="0.2" step="0.005" value="0.055"><output for="grain"></output></div>
+            <div class="slider"><label for="grain">Grain</label><input type="range" id="grain" min="0" max="0.2" step="0.005" value="0.085"><output for="grain"></output></div>
           </div>
           <div class="colours">
-            <label class="swatch">Water <input type="color" id="bgColor" value="#5e9de0"></label>
-            <label class="swatch">Ink <input type="color" id="inkColor" value="#f0f5fd"></label>
+            <label class="swatch">Water <input type="color" id="bgColor" value="#c5dc4d"></label>
+            <label class="swatch">Ink <input type="color" id="inkColor" value="#00a943"></label>
           </div>
         </div>
       </details>
@@ -100,7 +102,7 @@ ERUPT</textarea>
       <details class="control-group">
         <summary>Rings</summary>
         <div class="group-body sliders">
-          <div class="slider"><label for="lineWeight">Line weight</label><input type="range" id="lineWeight" min="0.25" max="6" step="0.25" value="1"><output for="lineWeight"></output></div>
+          <div class="slider"><label for="lineWeight">Line weight</label><input type="range" id="lineWeight" min="0.25" max="6" step="0.25" value="2"><output for="lineWeight"></output></div>
           <div class="slider"><label for="ringCount">Rings per drop</label><input type="range" id="ringCount" min="1" max="9" step="1" value="4"><output for="ringCount"></output></div>
           <div class="slider"><label for="rippleSpread">Ripple spread</label><input type="range" id="rippleSpread" min="0.3" max="2.5" step="0.02" value="1"><output for="rippleSpread"></output></div>
           <div class="slider"><label for="breaks">Breaks</label><input type="range" id="breaks" min="0" max="1" step="0.01" value="0.25"><output for="breaks"></output></div>
@@ -115,7 +117,7 @@ ERUPT</textarea>
             <label for="fontFace">Typeface</label>
             <select id="fontFace">
               <option value="inter">Inter</option>
-              <option value="win98">Windows bitmap</option>
+              <option value="win98" selected>Windows bitmap</option>
               <option value="poppins">Poppins</option>
               <option value="grotesk">Space Grotesk</option>
               <option value="bebas">Bebas Neue (all caps)</option>
@@ -125,10 +127,10 @@ ERUPT</textarea>
             </select>
           </div>
           <div class="sliders">
-            <div class="slider"><label for="typeSize">Type size</label><input type="range" id="typeSize" min="0.4" max="2.2" step="0.02" value="1"><output for="typeSize"></output></div>
-            <div class="slider"><label for="kerning">Kerning</label><input type="range" id="kerning" min="-0.08" max="0.35" step="0.01" value="0" aria-describedby="kerningHint"><output for="kerning"></output></div>
-            <div class="slider"><label for="typeTilt">Lay flat</label><input type="range" id="typeTilt" min="0" max="1" step="0.01" value="0"><output for="typeTilt"></output></div>
-            <div class="slider"><label for="textGlow">Text glow</label><input type="range" id="textGlow" min="0" max="1.2" step="0.01" value="0"><output for="textGlow"></output></div>
+            <div class="slider"><label for="typeSize">Type size</label><input type="range" id="typeSize" min="0.4" max="2.2" step="0.02" value="1.32"><output for="typeSize"></output></div>
+            <div class="slider"><label for="kerning">Kerning</label><input type="range" id="kerning" min="-0.08" max="0.35" step="0.01" value="-0.07" aria-describedby="kerningHint"><output for="kerning"></output></div>
+            <div class="slider"><label for="typeTilt">Lay flat</label><input type="range" id="typeTilt" min="0" max="1" step="0.01" value="0.19"><output for="typeTilt"></output></div>
+            <div class="slider"><label for="textGlow">Text glow</label><input type="range" id="textGlow" min="0" max="1.2" step="0.01" value="0.25"><output for="textGlow"></output></div>
           </div>
           <p class="hint" id="kerningHint">Kerning adjusts letter spacing in em. Text glow is independent of ring glow.</p>
           <label class="check"><input type="checkbox" id="sharpType" checked>Keep words sharp</label>
@@ -145,9 +147,9 @@ ERUPT</textarea>
         <summary>Motion &amp; camera</summary>
         <div class="group-body sliders">
           <div class="slider"><label for="dropRate">Drop interval</label><input type="range" id="dropRate" min="0.25" max="6" step="0.05" value="1.5"><output for="dropRate"></output></div>
-          <div class="slider"><label for="fallSpeed">Fall speed</label><input type="range" id="fallSpeed" min="0.2" max="4" step="0.05" value="1"><output for="fallSpeed"></output></div>
-          <div class="slider"><label for="rippleSpeed">Ripple speed</label><input type="range" id="rippleSpeed" min="0.2" max="3" step="0.02" value="1"><output for="rippleSpeed"></output></div>
-          <div class="slider"><label for="tilt">Surface tilt</label><input type="range" id="tilt" min="6" max="60" step="0.5" value="15"><output for="tilt"></output></div>
+          <div class="slider"><label for="fallSpeed">Fall speed</label><input type="range" id="fallSpeed" min="0.2" max="4" step="0.05" value="2.05"><output for="fallSpeed"></output></div>
+          <div class="slider"><label for="rippleSpeed">Ripple speed</label><input type="range" id="rippleSpeed" min="0.2" max="3" step="0.02" value="1.16"><output for="rippleSpeed"></output></div>
+          <div class="slider"><label for="tilt">Surface tilt</label><input type="range" id="tilt" min="6" max="60" step="0.5" value="11.5"><output for="tilt"></output></div>
           <div class="slider"><label for="bow">Perspective bow</label><input type="range" id="bow" min="0" max="1" step="0.01" value="0.72"><output for="bow"></output></div>
         </div>
       </details>
@@ -227,7 +229,7 @@ ERUPT</textarea>
   </footer>
 </div>
 
-<dialog id="welcomeDialog" class="welcome-dialog" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
+<dialog id="welcomeDialog" class="welcome-dialog" aria-labelledby="welcomeTitle" aria-describedby="welcomeInstructions">
   <header class="title-bar welcome-title-bar">
     <span>Welcome</span>
     <button type="button" id="welcomeClose" class="window-close" aria-label="Close welcome">
@@ -247,12 +249,14 @@ ERUPT</textarea>
         <p class="welcome-tagline">Words in motion. A little water, a little type.</p>
       </div>
     </div>
-    <p id="welcomeDescription">Add your words, click inside the canvas to drop them, and shape the ripples with ink, blur and glow.</p>
-    <p class="welcome-note">Choose your page size in the bottom bar. Only the framed canvas is saved or recorded.</p>
+    <div id="welcomeInstructions" class="welcome-instructions">
+      <p id="welcomeDescription">Add your words, click inside the canvas to drop them, and shape the ripples with ink, blur and glow.</p>
+      <p class="welcome-note">Choose your page size in the bottom bar. Only the framed canvas is saved or recorded.</p>
+    </div>
     <form method="dialog" class="welcome-actions">
       <button id="welcomeStart" value="start" autofocus>Let's go</button>
     </form>
-    <p class="welcome-byline">A kinetic type experiment inspired by Space Type Generator.<br>Interface type by lou, via 98.css.</p>
+    <p class="welcome-byline">Designed and Coded by Eemon Roy</p>
   </div>
 </dialog>
 
@@ -264,7 +268,7 @@ ERUPT</textarea>
 <script src="js/blur.js?v=win98-2"></script>
 <script src="js/render.js?v=win98-2"></script>
 <script src="js/export.js?v=win98-2"></script>
-<script src="js/controls.js?v=welcome-1"></script>
+<script src="js/controls.js?v=approved-defaults-1"></script>
 <script src="js/main.js?v=win98-2"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Ripple Type Generator
 
-A kinetic type generator. White droplets fall onto blue water, each impact blooms a word
+A kinetic type generator. Droplets fall onto a colored water plane, each impact blooms a word
 inside an expanding set of ripple rings, and rings from different words genuinely
 interfere with one another.
 
@@ -38,8 +38,9 @@ system fonts. Select **Windows bitmap** under Typography to use it for the artwo
 Regular and bold 11px interface type keeps the bitmap grid consistent; the welcome
 headline uses the same face at 22px.
 
-The **Welcome** window opens on launch with a short introduction, recording guidance
-and credits. Dismiss it with **Let's go**, its close button, or Escape. Reopen it from
+The **Welcome** window opens on launch with a short introduction and two instructions
+in one inset box, followed by "Designed and Coded by Eemon Roy". Dismiss it with the
+compact **Let's go** button, its close button, or Escape. Reopen it from
 the Welcome menu. Background keyboard shortcuts are ignored while it is open; the
 Welcome menu is disabled during recording. The popup is never included in exports.
 
@@ -54,6 +55,12 @@ Welcome menu is disabled during recording. The popup is never included in export
 **Words** — one per line, or comma separated. They cycle in order, one per droplet.
 Capitalization is preserved: `Rain`, `rain`, and `rAiN` remain different. Some display
 fonts, such as Bebas Neue, use all-capital glyph designs regardless of input.
+
+**Default artwork** restores the approved startup look: Windows bitmap type, green
+ink `#00a943` on `#c5dc4d`, and the words `Anchored`, `Arduos`, `Ageless`, `Abiding`
+exactly as entered. It also restores the selected motion, ring, camera, glow, blur,
+kerning and grain settings. The pink/plum UI palette and Fit window page mode remain
+the startup defaults; choosing an artwork preset does not reset UI colors or page size.
 
 **Water** — drop rate, fall speed, ripple speed, ripple spread, rings per drop,
 **line weight** (0.25x to 6x in either finish), **breaks** (frays the rings into open
@@ -250,7 +257,8 @@ high-DPI output, resizing, click-to-drop, mixed-case words, rail accessibility,
 independent text blur/glow, kerning, UI palette isolation, fixed recording dimensions
 and PNG round trips, including custom page sizes and the four aspect presets.
 Welcome focus/dismissal, background shortcut isolation, recording restrictions
-and the independent bevel colors are covered as well.
+and the independent bevel colors are covered as well. The approved launch settings
+and Default artwork restoration are checked against the saved selection.
 The page also displays example renders for visual comparison.
 
 ## Layout

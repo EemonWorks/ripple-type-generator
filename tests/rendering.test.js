@@ -82,13 +82,49 @@
       input.dispatchEvent(new Event('change'));
     }
 
+    var approved = {
+      words: ['Anchored', 'Arduos', 'Ageless', 'Abiding'],
+      dropRate: 1.5, fallSpeed: 2.05, rippleSpeed: 1.16, rippleSpread: 1,
+      ringCount: 4, lineWeight: 2, breaks: 0.25, interference: 1,
+      tilt: 11.5, bow: 0.72, typeSize: 1.32, typeTilt: 0.19,
+      font: 'win98', finish: 'glow', inkBlur: 0.2, inkSpread: 0.04,
+      sharpType: true, textBlur: 0.15, textGlow: 0.25, kerning: -0.07,
+      glow: 0.08, soften: 0.21, grain: 0.085, bg: '#c5dc4d', ink: '#00a943',
+      uiFace: '#ffccf1', uiTitle: '#800064', uiTitleEnd: '#ffc7f0',
+      uiTitleText: '#ffffff', uiText: '#35112d', uiHighlight: '#ffffff',
+      uiEdgeLight: '#fff0fa', uiShadow: '#d69abc', uiEdgeDark: '#800064', uiDesktop: '#edddea'
+    };
+
+    function assertApproved() {
+      Object.keys(approved).forEach(function (key) {
+        assert(JSON.stringify(R.Controls.state[key]) === JSON.stringify(approved[key]), 'Approved setting differs: ' + key);
+        var input = doc.getElementById(key);
+        if (input && input.type === 'range') assert(+input.value === approved[key], 'Default slider is out of sync: ' + key);
+      });
+      assert(doc.getElementById('fontFace').value === 'win98', 'Default typeface selection differs');
+      assert(doc.getElementById('words').value === approved.words.join('\n'), 'Default words differ');
+      assert(doc.getElementById('bgColor').value === approved.bg &&
+        doc.getElementById('inkColor').value === approved.ink, 'Default color pickers differ');
+    }
+
+    test('Startup matches the approved preview settings and palette', function () {
+      assertApproved();
+      assert(doc.getElementById('preset').value === 'default', 'Default artwork is not selected');
+      assert(R.Controls.state.pageMode === 'fit', 'Page should still fit the window');
+    });
+
     test('Welcome opens with a labelled dialog and a focused start button', function () {
       var welcome = doc.getElementById('welcomeDialog');
       assert(welcome.open, 'Welcome did not open on launch');
       assert(welcome.getAttribute('aria-labelledby') === 'welcomeTitle', 'Welcome title is not labelled');
       assert(welcome.contains(doc.activeElement), 'Keyboard focus is outside the modal');
       assert(doc.getElementById('welcomeDescription').textContent.indexOf('canvas') >= 0, 'Welcome is missing usage guidance');
-      assert(welcome.querySelector('.welcome-byline').textContent.indexOf('lou') >= 0, 'Welcome credits are missing');
+      assert(welcome.querySelector('.welcome-byline').textContent === 'Designed and Coded by Eemon Roy', 'Welcome credit is incorrect');
+      assert(!welcome.textContent.includes('A kinetic type experiment inspired by Space Type Generator.'), 'Removed byline is still present');
+      var instructions = doc.getElementById('welcomeInstructions');
+      assert(instructions.querySelectorAll('p').length === 2 &&
+        instructions.contains(doc.getElementById('welcomeDescription')) &&
+        instructions.contains(welcome.querySelector('.welcome-note')), 'The instructions are not in a single box');
     });
     doc.getElementById('welcomeStart').click();
 
@@ -194,6 +230,16 @@
         assert(+doc.getElementById(id).value === R.Controls.state[id], 'Slider out of sync: ' + id);
       });
       assert(R.Controls.state.words.join('|') === before, 'Preset changed the word list');
+    });
+
+    test('Default artwork restores the complete approved creative settings', function () {
+      select('fontFace', 'inter');
+      doc.getElementById('words').value = 'Different words';
+      doc.getElementById('words').dispatchEvent(new Event('input'));
+      doc.getElementById('lineWeight').value = '5';
+      doc.getElementById('lineWeight').dispatchEvent(new Event('input'));
+      select('preset', 'default');
+      assertApproved();
     });
 
     test('Sliders and sharp-text checkbox update live state', function () {
@@ -430,7 +476,13 @@
     R.Camera.configure(W, H, 15, 0.02 + 0.55 * Math.pow(1 - 0.72, 2.5));
     R.Ripples.clear();
     R.Droplets.clear();
-    var params = Object.assign({}, R.Controls.state, { grain: 0, interference: 1 });
+    // Keep rendering comparisons independent of changes to the approved launch look.
+    var params = Object.assign({}, R.Controls.state, {
+      finish: 'diffuse', bg: '#f4f5f2', ink: '#2454f5',
+      inkBlur: 0.4, inkSpread: 0.3, lineWeight: 1, typeSize: 1, typeTilt: 0,
+      kerning: 0, textGlow: 0, rippleSpeed: 1, glow: 0.45, soften: 0.12,
+      grain: 0, interference: 1
+    });
     R.Ripples.spawn(W * 0.38, H * 0.25, 'Ripple', 0, params);
     R.Ripples.spawn(W * 0.59, H * 0.67, 'water', -0.1, params);
 

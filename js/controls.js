@@ -4,40 +4,45 @@
 (function (RTG) {
   'use strict';
 
-  var state = {
-    words: ['ERASE', 'EXPAND', 'ERUPT'],
+  var DEFAULT_ARTWORK = {
+    words: ['Anchored', 'Arduos', 'Ageless', 'Abiding'],
     dropRate: 1.5,
-    fallSpeed: 1,
-    rippleSpeed: 1,
+    fallSpeed: 2.05,
+    rippleSpeed: 1.16,
     rippleSpread: 1,
     ringCount: 4,
-    lineWeight: 1,
+    lineWeight: 2,
     breaks: 0.25,
     interference: 1,
-    tilt: 15,
+    tilt: 11.5,
     bow: 0.72,
-    typeSize: 1,
-    typeTilt: 0,
-    font: 'inter',
+    typeSize: 1.32,
+    typeTilt: 0.19,
+    font: 'win98',
     finish: 'glow',
-    inkBlur: 0.4,
-    inkSpread: 0.3,
+    inkBlur: 0.2,
+    inkSpread: 0.04,
     sharpType: true,
     textBlur: 0.15,
-    textGlow: 0,
-    kerning: 0,
-    glow: 0.45,
-    soften: 0.12,
-    grain: 0.055,
-    bg: '#5e9de0',
-    ink: '#f0f5fd',
+    textGlow: 0.25,
+    kerning: -0.07,
+    glow: 0.08,
+    soften: 0.21,
+    grain: 0.085,
+    bg: '#c5dc4d',
+    ink: '#00a943'
+  };
+
+  var state = Object.assign({}, DEFAULT_ARTWORK, {
+    words: DEFAULT_ARTWORK.words.slice(),
     pageMode: 'fit',
     pageWidth: 1920,
     pageHeight: 1080,
     paused: false
-  };
+  });
 
   var PRESETS = {
+    default: { bg: DEFAULT_ARTWORK.bg, ink: DEFAULT_ARTWORK.ink, finish: DEFAULT_ARTWORK.finish, settings: DEFAULT_ARTWORK },
     reference: { bg: '#5e9de0', ink: '#f0f5fd' },
     cobalt: { bg: '#f4f5f2', ink: '#2454f5', finish: 'diffuse', inkBlur: 0.4, inkSpread: 0.3, grain: 0.16 },
     midnight: { bg: '#0e1930', ink: '#7fa9f0' },
@@ -310,7 +315,18 @@
         ink.value = p.ink;
         $('finish').value = p.finish || 'glow';
         syncFinish();
-        if (p.finish === 'diffuse') {
+        if (p.settings) {
+          Object.keys(p.settings).forEach(function (key) {
+            var input = $(key);
+            if (input && input.type === 'range') setRange(key, p.settings[key]);
+          });
+          words.value = p.settings.words.join('\n');
+          syncWords();
+          fontSel.value = p.settings.font;
+          applyFace(fontSel.value);
+          $('sharpType').checked = p.settings.sharpType;
+          syncTextBlur();
+        } else if (p.finish === 'diffuse') {
           setRange('inkBlur', p.inkBlur);
           setRange('inkSpread', p.inkSpread);
           setRange('grain', p.grain);

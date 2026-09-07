@@ -95,7 +95,7 @@ body { padding: 8px; font-family: var(--ui); color: var(--ui-text); }
 #recordingStatus { font-weight: bold; }
 #canvasViewport { flex: 1; min-width: 0; min-height: 0; display: grid; place-items: center; overflow: hidden; }
 #recordingFrame { padding: 5px; border: 2px solid; border-color: var(--ui-edge-dark) var(--ui-highlight) var(--ui-highlight) var(--ui-edge-dark); background: var(--ui-face); box-shadow: var(--sunken); }
-#stage { display: block; touch-action: none; cursor: crosshair; background: #5e9de0; }
+#stage { display: block; touch-action: none; cursor: crosshair; background: #c5dc4d; }
 .is-recording #recordingFrame { outline: 2px solid #bd284c; outline-offset: -1px; }
 
 .status-bar { display: flex; flex: none; align-items: center; flex-wrap: wrap; gap: 4px; padding-top: 4px; font: 11px var(--ui); }
@@ -405,10 +405,11 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--ui-shadow); bor
 .welcome-eyebrow { margin: 0 0 4px; font-weight: 700; }
 .welcome-intro h2 { margin: 0; font: 400 22px/1.3 var(--ui); }
 .welcome-tagline { margin: 8px 0 0; }
-#welcomeDescription { margin: 0 0 12px; }
-.welcome-note { margin: 0; padding: 10px; box-shadow: var(--sunken); }
-.welcome-actions { display: flex; justify-content: center; margin: 24px 0 18px; }
-.welcome-actions button { min-width: 150px; min-height: 44px; padding: 6px 24px; border: 0; border-radius: 0; color: var(--ui-text); background: var(--ui-face); box-shadow: var(--raised); cursor: pointer; font: 400 22px var(--ui); }
+.welcome-instructions { padding: 12px; box-shadow: var(--sunken); }
+#welcomeDescription { margin: 0; }
+.welcome-note { margin: 10px 0 0; }
+.welcome-actions { display: flex; justify-content: center; margin: 18px 0 14px; }
+.welcome-actions button { min-width: 100px; min-height: 32px; padding: 6px 18px; border: 0; border-radius: 0; color: var(--ui-text); background: var(--ui-face); box-shadow: var(--raised); cursor: pointer; font: 400 11px var(--ui); }
 .welcome-actions button:active { box-shadow: var(--sunken); }
 .welcome-byline { margin: 0; text-align: center; font-size: 11px; }
 
