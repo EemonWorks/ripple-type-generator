@@ -1,152 +1,199 @@
-# 🌊 Ripple Type Generator: Complete Visual Tutorial & Guide
+# Ripple Type Generator — Tutorial
 
-Welcome to the **Ripple Type Generator** tutorial! This guide walks you through every control, parameter, effect, and workflow in the app — from crafting fluid typography with interactive water ripples to exporting high-resolution video clips, animated GIFs, and posters.
-
----
-
-## 🎬 Live Motion Demo
-
-Below is a demonstration of the generator in action — showing real-time word animation, interactive canvas click ripples, organic ring break adjustments, typography tilt, color preset switches, and vertical aspect ratios:
-
-![Ripple Type Generator Live Demo](tutorial/video/ripple-type-generator-demo.gif)
-
-*(High-definition MP4 and WebM video captures are also available in `tutorial/video/ripple-type-generator-demo.mp4` and `tutorial/video/ripple-type-generator-demo.webm`)*
+Words fall as droplets onto a tilted sheet of water. Where each one lands it leaves a
+ring, the ring carries the word, and overlapping rings interfere with each other.
+This guide walks through every control in the app.
 
 ---
 
-## 🗺️ Interface Overview & Annotated Map
+## Demo
 
-The interface combines a nostalgic **Windows 98 retro aesthetic** with a modern GPU-accelerated canvas engine.
+![Ripple Type Generator demo](tutorial/video/ripple-type-generator-demo.gif)
 
-### 1. Workspace Layout
-![Workspace Layout](tutorial/screenshots/02-full-workspace-annotated.png)
+The clip above is a real 36-second screen recording, in order:
 
-1. **Title Bar & Window Controls**: Contains retro minimize/maximize/close icons, quick audio toggle, and app branding.
-2. **Left Control Rail**: Houses all collapsible setting groups: Words, Finishes, Rings, Typography, Motion, UI Palette, and Export Tools.
-3. **Interactive Kinetic Canvas**: Renders real-time ripples, typography, and optical diffusion shaders. Clicking anywhere on the canvas drops an instant water droplet.
-4. **Bottom Status Bar**: Displays live FPS telemetry, active drop counter, canvas dimensions, resolution multiplier, and one-click quick action buttons (Preset, Pause, Aspect Ratio, Screenshot).
+| Time | What is happening |
+| :--- | :--- |
+| 0:00 | Words fall on their own and leave ripples |
+| 0:04 | Clicking the canvas drops a word exactly where you click |
+| 0:08 | **Type size** scales the words down, then up |
+| 0:14 | **Lay flat** tips the words onto the water, then stands them straight again |
+| 0:20 | **Surface tilt** changes the angle the ripples are seen from |
+| 0:26 | **Preset** swaps the background colour — Reference blue, Midnight, Rust, Ink on bone |
 
----
-
-## 🎛️ Detailed Control Reference
-
-![Control Rail Annotated](tutorial/screenshots/03-control-rail-annotated.png)
-
-### 📝 Words & Fall Sequences
-* **Words Input (`words`)**: Comma-separated or newline-separated list of words (e.g., `ANCHORED, ARDUOUS, AGELESS, ABIDING`). The engine continuously drops water ripples in this sequence.
-* **Fall Speed (`fallSpeed`)**: Controls the descent velocity of words entering the fluid field.
-* **Drop Rate (`dropRate`)**: Frequency of new words spawning onto the canvas.
-
-### ✨ Finishes & Diffusion Shading
-* **Finish Preset Selector (`finish`)**: Choose between optical surface styles:
-  * `Glow`: High-energy neon luminescence with soft bloom.
-  * `Paper`: Matted tactile paper grain with organic edge diffusion.
-  * `Bleed`: Heavy ink diffusion simulating wet watercolor or risograph bleed.
-  * `Ghost`: Ethereal semi-transparent trail echoes.
-* **Line Weight (`lineWeight`)**: Stroke thickness of the concentric water ripple rings.
-* **Ripple Glow (`glow`)**: Luminance intensity of the expanding wavefronts.
-* **Soften / Blur (`soften`)**: Multi-pass box blur smoothing that creates organic fluid cohesion.
-* **Film Grain (`grain`)**: Analog tactile noise added to paper and background textures.
-* **Sharp Type (`sharpType`)**: When enabled, keeps letterforms razor-sharp while allowing the outer ripple rings to diffuse organically.
+Higher quality copies live next to it:
+`tutorial/video/ripple-type-generator-demo.mp4` (1280×720, 30fps) and
+`ripple-type-generator-demo.webm`.
 
 ---
 
-### ⭕ Organic Rings & Breaking Geometry
-* **Ring Breaks (`ringBreaks`)**: Introduces natural randomized breaks and gaps along the circumference of the concentric circles to break mechanical rigidity into organic water rings.
-* **Ring Speed (`rippleSpeed`)**: Propagation speed of the expanding shockwaves.
-* **Fade Duration (`rippleDecay`)**: Lifespan and dissipation rate of expanding waves.
+## The window
+
+![Workspace](tutorial/screenshots/02-full-workspace-annotated.png)
+
+| Area | What it is |
+| :--- | :--- |
+| Control rail (left) | Collapsible groups: Words, Finish & colour, Rings, Typography, Motion & camera, UI palette |
+| Recording area (right) | The canvas. Only this rectangle is exported — the UI never appears in your file |
+| Rail footer | **Drop**, **Pause**, **Clear** |
+| Status bar (bottom) | **Save image**, **Record video**, page size, live pixel dimensions, capture status |
+
+The `‹` button at the top of the rail collapses it to a thin spine, so you can see the
+artwork full width. Press it again — or `H` — to bring the controls back.
 
 ---
 
-### 🔤 Typography & Angles
-![Typography & Angles](tutorial/screenshots/07-preset-typography-tilt.png)
+## Words
 
-* **Font Selector (`font`)**: Choose between retro monospace (`Win98 System`), bold geometric sans (`Inter`, `Syne`), expressive serifs (`Playfair`), or cyber display fonts.
-* **Type Size (`typeSize`)**: Scale multiplier for the rendered typographic glyphs.
-* **Type Tilt (`typeTilt`)**: Isometric perspective slant angle applied directly to the letterforms.
-* **Global Canvas Tilt (`tilt`)**: Global angular rotation of the ripple field.
-* **Kerning (`kerning`)**: Letter-spacing adjustments for tight or loose typography.
+![Control rail](tutorial/screenshots/03-control-rail-annotated.png)
 
----
-
-### 🎵 Music & Interactive Droplets
-* **Interactive Canvas Clicks**: Click or tap anywhere on the canvas surface to immediately spawn an interactive ripple droplet at that exact coordinate.
-* **YouTube / Audio Sync Mode**: Toggle the audio mode to play music or YouTube tracks with captions — falling droplets react to lyric timing and audio amplitude.
+One word per line, or comma separated. Your capitalization is preserved, so
+`Anchored` falls as `Anchored`, not `ANCHORED`. The app cycles through the list in
+order, and a click on the canvas pulls the next word from the same list.
 
 ---
 
-## 🎨 Color Presets & Themes
+## Finish & colour
 
-![Cobalt Diffusion Preset](tutorial/screenshots/06-preset-cobalt-annotated.png)
+**Preset** — the dropdown used in the demo. Seven of them:
 
-The generator includes curated color and optical presets:
-* **Chartreuse Glow (Default)**: `#c5dc4d` vibrant lime background with `#00a943` forest ink.
-* **Cobalt Paper Diffusion**: `#889ae3` periwinkle background with `#0017a9` rich cobalt ink and heavy paper texture.
-* **Toxic Cyber Neon**: `#000000` pitch black canvas with `#00ff66` neon radioactive ink.
-* **Noir Risograph**: `#ffffff` clean paper with `#0a0a0a` deep carbon black ink.
-* **Sunset Dream**: `#ff5e62` warm coral background with `#3a0066` twilight purple ink.
+| Preset | Water | Ink |
+| :--- | :--- | :--- |
+| Default artwork | chartreuse `#c5dc4d` | green `#00a943` |
+| Reference blue | `#5e9de0` | near-white `#f0f5fd` |
+| Cobalt paper — ink blur | `#f4f5f2` | cobalt `#2454f5` (switches to Diffused ink) |
+| Midnight | `#0e1930` | pale blue `#7fa9f0` |
+| Ink on bone | `#efe7d8` | near-black `#1d1c1a` |
+| Acid | `#c9f24a` | dark olive `#152210` |
+| Rust | `#bf4f2b` | warm cream `#ffe7d4` |
 
----
+*Default artwork* also restores every slider, so reach for it when you want to start
+over. The other six only change colour and finish, which is why the demo can set up
+the type and the tilt first and then flip through backgrounds without losing them.
 
-## 📐 Aspect Ratios & Frame Modes
+**Finish** — two rendering models:
 
-![Aspect Ratio 9:16](tutorial/screenshots/08-aspect-ratio-9-16.png)
+- **Glow & soft lines** — luminous rings. Exposes **Glow** and **Ring blur**.
+- **Diffused ink** — ink bleeding into paper. Exposes **Ink blur** and **Ink spread**.
 
-Switch canvas dimensions instantly for any delivery channel:
-* **16:9 Landscape**: Desktop banners, video backgrounds, presentations.
-* **9:16 Vertical**: Instagram Stories, TikTok, YouTube Shorts, mobile wallpapers.
-* **1:1 Square**: Instagram posts, album artwork, avatar art.
-* **Fill / Responsive**: Dynamically expands to fill your browser window.
-
----
-
-## 💾 Export Options & Deliverables
-
-![Export Bar Annotated](tutorial/screenshots/05-export-statusbar-annotated.png)
-
-* **📸 Export PNG (High-Res)**: Captures pixel-perfect raster stills up to 4K resolution (`1x`, `2x`, `4x` scale multipliers).
-* **🎥 Export WebM / MP4 Video**: Records seamless 60fps canvas animations directly in the browser using the MediaRecorder API.
-* **🎞️ Export Animated GIF**: Generates optimized looping GIFs for easy sharing on social media.
-* **📐 Export Vector SVG**: Exports clean vector contour paths of the current frame for print and plotter workflows.
+**Grain** adds paper noise. **Water** and **Ink** are free colour pickers if none of
+the presets are what you want.
 
 ---
 
-## ⌨️ Keyboard Shortcuts Reference
+## Rings
+
+| Control | What it does |
+| :--- | :--- |
+| Line weight | Thickness of each ring |
+| Rings per drop | How many concentric rings one droplet makes (1–9) |
+| Ripple spread | How far the rings travel from the impact point |
+| Breaks | Cuts small gaps in the circles so they look hand-drawn instead of perfect |
+| Interference | How strongly overlapping rings distort each other |
+
+**Breaks** is the organic-shapes control. At `0%` the rings are perfect circles; push
+it up and the outlines start to break apart like real disturbed water.
+
+---
+
+## Typography
+
+![Angled typography](tutorial/screenshots/07-preset-typography-tilt.png)
+
+**Font** — Inter, Windows bitmap (the default), Poppins, Space Grotesk, Bebas Neue,
+Anton, IBM Plex Mono, Playfair Display. Everything except Windows bitmap is fetched
+from Google Fonts the first time you pick it.
+
+| Control | What it does |
+| :--- | :--- |
+| Type size | Scales the words. Demo at 0:08 |
+| Kerning | Letter spacing, in em |
+| Lay flat | `0%` stands the word upright, `100%` lays it flat into the water plane. Demo at 0:14 |
+| Text glow | Halo on the letters only, independent of ring glow |
+| Keep words sharp | On by default. Keeps letters crisp while the rings stay soft |
+| Text blur | Only adjustable once *Keep words sharp* is off |
+
+---
+
+## Motion & camera
+
+| Control | What it does |
+| :--- | :--- |
+| Drop interval | Seconds between automatic drops. Higher = calmer |
+| Fall speed | How fast a droplet falls before impact |
+| Ripple speed | How fast rings expand once it lands |
+| Surface tilt | The viewing angle of the water, 6°–60°. Demo at 0:20 |
+| Perspective bow | How much perspective is applied. Low values flatten it toward a plan view |
+
+**Surface tilt** is the one that changes the angle of the ripples. Low values look
+almost edge-on, so rings read as flat ellipses; high values look down at the water and
+the rings open up into circles.
+
+---
+
+## Exporting
+
+![Export bar](tutorial/screenshots/05-export-statusbar-annotated.png)
+
+- **Save image** writes a PNG of the canvas at its current pixel size.
+- **Record video** captures the canvas live. It records WebM (VP9, falling back to VP8),
+  or MP4 where the browser supports it. Press it again to stop and download.
+- **Page** sets the export size: Fit window, 16:9, 9:16, 4:4 (square), 18:9, or Custom
+  via the **W** / **H** boxes and **Apply**.
+
+The status bar always shows the true export resolution, and the canvas cannot be
+resized while a recording is running.
+
+![9:16 vertical](tutorial/screenshots/08-aspect-ratio-9-16.png)
+
+---
+
+## Keyboard
 
 | Key | Action |
 | :--- | :--- |
-| **`Space`** | Play / Pause kinetic animation |
-| **`R`** | Cycle to next Color / Diffusion Preset |
-| **`C`** | Clear active ripples on canvas |
-| **`S`** | Quick Save PNG screenshot |
-| **`H`** | Hide / Show Control Rail (Presentation mode) |
-| **`Click / Tap`** | Spawn manual water droplet at cursor position |
+| `D` | Drop a word now |
+| `C` | Clear the water |
+| `Space` | Pause / resume |
+| `H` | Show or hide the control rail |
+| `Esc` | Hide the control rail |
+| Click canvas | Drop a word at that exact point |
+
+Shortcuts are ignored while you are typing in a field, so you can use the letters
+`d`, `c` and `h` inside the Words box normally.
 
 ---
 
-## 📂 File Directory
+## A quick recipe
 
-All tutorial assets, captures, and videos are saved in the project repository:
+1. Type four words into **Words**.
+2. Pick **Midnight** from **Preset**.
+3. Set **Lay flat** to about `20%` and **Surface tilt** to about `25°`.
+4. Raise **Breaks** to roughly `40%` so the rings stop looking mechanical.
+5. Set **Page** to `9:16`, press **Apply**.
+6. Press **Record video**, let it run, press it again to save.
+
+---
+
+## Files
+
 ```
-tutorial/
-├── index.html                               # Interactive HTML tutorial viewer
-├── TUTORIAL.md                              # This complete markdown guide
-├── screenshots/
-│   ├── 01-welcome-dialog.png                # Welcome dialog & quick start
-│   ├── 02-full-workspace.png                # Unannotated full workspace
-│   ├── 02-full-workspace-annotated.png      # Annotated workspace breakdown
-│   ├── 03-control-rail-all-open.png         # Full control panel capture
-│   ├── 03-control-rail-annotated.png        # Annotated parameter controls
-│   ├── 04-canvas-workspace.png              # Live kinetic canvas view
-│   ├── 04-canvas-workspace-annotated.png    # Annotated canvas interaction points
-│   ├── 05-export-statusbar.png              # Status bar & export toolbar
-│   ├── 05-export-statusbar-annotated.png    # Annotated export controls
-│   ├── 06-preset-cobalt-diffusion.png       # Cobalt paper diffusion preset
-│   ├── 06-preset-cobalt-annotated.png       # Annotated preset breakdown
-│   ├── 07-preset-typography-tilt.png        # Angled typography preset
-│   └── 08-aspect-ratio-9-16.png             # Vertical story 9:16 format
-└── video/
-    ├── ripple-type-generator-demo.mp4       # 1080p H.264 video demo
-    ├── ripple-type-generator-demo.webm      # WebM VP9 video demo
-    └── ripple-type-generator-demo.gif       # 60-frame looping animated GIF
+TUTORIAL.md                                  this guide
+tutorial/index.html                          the same guide as a local viewer
+tutorial/screenshots/
+  01-welcome-dialog.png                      the opening window
+  02-full-workspace.png / -annotated.png     window layout
+  03-control-rail-all-open.png / -annotated  every control group
+  04-canvas-workspace.png / -annotated.png   the canvas and click drops
+  05-export-statusbar.png / -annotated.png   export controls
+  06-preset-cobalt-diffusion.png / -annotated  Diffused ink finish
+  07-preset-typography-tilt.png              angled type
+  08-aspect-ratio-9-16.png                   vertical page size
+tutorial/video/
+  ripple-type-generator-demo.mp4             1280x720, 30fps, 36s
+  ripple-type-generator-demo.webm            same, VP9
+  ripple-type-generator-demo.gif             600px, looping
 ```
+
+Open `tutorial/index.html` in a browser to read this with the video embedded and the
+screenshots zoomable.

@@ -1,400 +1,236 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ripple Type Generator — Visual Tutorial & Guide</title>
-  <style>
-    :root {
-      --win-bg: #c0c0c0;
-      --win-text: #000000;
-      --win-border-light: #ffffff;
-      --win-border-dark: #808080;
-      --win-border-black: #000000;
-      --win-blue: #000080;
-      --win-blue-light: #1084d0;
-      --accent-pink: #f06292;
-      --accent-green: #00a943;
-      --accent-lime: #c5dc4d;
-      --card-bg: #e0e0e0;
-      --font-system: 'MS Sans Serif', Tahoma, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ripple Type Generator — Tutorial</title>
+<style>
+  :root{
+    --face:#ffccf1; --title:#800064; --title-end:#ffc7f0; --text:#35112d;
+    --edge-dark:#800064; --edge-light:#fff0fa; --shadow:#d69abc; --desktop:#edddea;
+    --ui:'MS Sans Serif',Tahoma,Geneva,Verdana,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--desktop);font:13px/1.6 var(--ui);color:var(--text);padding:20px 14px}
+  .wrap{max-width:1000px;margin:0 auto}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
-      background-color: #008080;
-      font-family: var(--font-system);
-      color: var(--win-text);
-      padding: 24px 16px;
-      line-height: 1.5;
-    }
+  .win{background:var(--face);border:1px solid var(--edge-dark);
+    box-shadow:inset 1px 1px 0 var(--edge-light),4px 4px 0 var(--edge-dark);margin-bottom:22px}
+  .bar{background:linear-gradient(90deg,var(--title),var(--title-end));color:#fff;
+    padding:5px 10px;font-weight:700;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+  .bar span.dots{letter-spacing:2px;opacity:.9}
+  .body{padding:16px}
 
-    .container {
-      max-width: 1080px;
-      margin: 0 auto;
-    }
+  h1{font-size:20px;margin-bottom:6px}
+  h2{font-size:14px;margin:0 0 10px;padding-bottom:5px;border-bottom:1px solid var(--shadow)}
+  p{margin-bottom:10px}
+  .lede{color:#5d3350;margin-bottom:14px}
+  code{background:#fff;border:1px solid var(--shadow);padding:0 4px;font-family:'IBM Plex Mono',Menlo,monospace;font-size:12px}
 
-    /* Windows 98 Window Styling */
-    .window {
-      background: var(--win-bg);
-      border-top: 2px solid var(--win-border-light);
-      border-left: 2px solid var(--win-border-light);
-      border-right: 2px solid var(--win-border-black);
-      border-bottom: 2px solid var(--win-border-black);
-      box-shadow: 2px 2px 0px rgba(0,0,0,0.4);
-      margin-bottom: 24px;
-    }
+  video{width:100%;background:#000;border:1px solid var(--edge-dark);display:block}
+  .cap{font-size:12px;color:#5d3350;margin-top:8px}
 
-    .title-bar {
-      background: linear-gradient(90deg, var(--win-blue), var(--win-blue-light));
-      color: white;
-      padding: 4px 8px;
-      font-weight: bold;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
-      letter-spacing: 0.5px;
-    }
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--shadow);margin-bottom:12px}
+  th,td{text-align:left;padding:6px 9px;border-bottom:1px solid #eddbe7;vertical-align:top}
+  th{background:var(--face);font-weight:700;border-bottom:1px solid var(--shadow)}
+  tr:last-child td{border-bottom:0}
+  td.k{white-space:nowrap;font-weight:700;width:1%}
 
-    .title-controls button {
-      width: 18px;
-      height: 18px;
-      background: var(--win-bg);
-      border-top: 1px solid var(--win-border-light);
-      border-left: 1px solid var(--win-border-light);
-      border-right: 1px solid var(--win-border-black);
-      border-bottom: 1px solid var(--win-border-black);
-      font-size: 11px;
-      line-height: 14px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-left: 2px;
-    }
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .shot{background:#fff;border:1px solid var(--shadow);padding:9px}
+  .shot h3{font-size:12px;margin-bottom:7px}
+  .shot img{width:100%;display:block;border:1px solid var(--shadow);cursor:zoom-in}
+  .shot p{font-size:12px;color:#5d3350;margin:7px 0 0}
 
-    .window-body {
-      padding: 16px;
-    }
+  .sw{display:inline-block;width:11px;height:11px;border:1px solid var(--edge-dark);vertical-align:-1px;margin-right:5px}
+  ol{margin:0 0 4px 20px}  ol li{margin-bottom:5px}
 
-    .header-content {
-      background: #ffffff;
-      border: 2px inset #808080;
-      padding: 20px;
-      margin-bottom: 16px;
-    }
-
-    h1 {
-      font-size: 24px;
-      margin-bottom: 8px;
-      color: #000080;
-    }
-
-    p.subtitle {
-      font-size: 14px;
-      color: #555;
-      margin-bottom: 12px;
-    }
-
-    .tag-badge {
-      display: inline-block;
-      background: var(--accent-lime);
-      color: var(--accent-green);
-      font-weight: bold;
-      padding: 2px 8px;
-      border: 1px solid var(--accent-green);
-      font-size: 12px;
-      margin-right: 6px;
-    }
-
-    /* Video Player Section */
-    .video-card {
-      background: #000;
-      border: 2px inset #808080;
-      padding: 8px;
-      text-align: center;
-      margin-bottom: 16px;
-    }
-
-    video {
-      width: 100%;
-      max-height: 540px;
-      background: #000;
-      outline: none;
-    }
-
-    /* Grid Section */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
-    }
-
-    .shot-card {
-      background: #ffffff;
-      border: 2px inset #808080;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .shot-card h3 {
-      font-size: 15px;
-      color: #000080;
-      margin-bottom: 8px;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 4px;
-    }
-
-    .shot-card img {
-      width: 100%;
-      height: auto;
-      border: 1px solid #000;
-      cursor: zoom-in;
-      transition: transform 0.2s;
-    }
-
-    .shot-card img:hover {
-      opacity: 0.95;
-    }
-
-    .shot-card p {
-      font-size: 12px;
-      color: #333;
-      margin-top: 8px;
-    }
-
-    /* Control Specs Table */
-    table.win-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #ffffff;
-      border: 2px inset #808080;
-      font-size: 13px;
-      margin-top: 12px;
-    }
-
-    table.win-table th {
-      background: #dfdfdf;
-      border-bottom: 2px solid #808080;
-      border-right: 1px solid #808080;
-      padding: 6px 10px;
-      text-align: left;
-      font-weight: bold;
-    }
-
-    table.win-table td {
-      border-bottom: 1px solid #e0e0e0;
-      border-right: 1px solid #e0e0e0;
-      padding: 6px 10px;
-    }
-
-    /* Modal Lightbox */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-    }
-
-    .modal img {
-      max-width: 95%;
-      max-height: 90vh;
-      border: 3px solid #fff;
-      box-shadow: 0 0 20px rgba(0,0,0,0.8);
-    }
-
-    .btn-win {
-      background: var(--win-bg);
-      border-top: 2px solid var(--win-border-light);
-      border-left: 2px solid var(--win-border-light);
-      border-right: 2px solid var(--win-border-black);
-      border-bottom: 2px solid var(--win-border-black);
-      padding: 4px 14px;
-      font-size: 13px;
-      font-weight: bold;
-      cursor: pointer;
-      font-family: inherit;
-    }
-
-    .btn-win:active {
-      border-top: 2px solid var(--win-border-black);
-      border-left: 2px solid var(--win-border-black);
-      border-right: 2px solid var(--win-border-light);
-      border-bottom: 2px solid var(--win-border-light);
-    }
-  </style>
+  .modal{display:none;position:fixed;inset:0;background:rgba(20,4,16,.88);z-index:99;
+    align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
+  .modal img{max-width:96%;max-height:92vh;border:2px solid #fff}
+</style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="container">
-  
-  <!-- Main Header Window -->
-  <div class="window">
-    <div class="title-bar">
-      <span>🌊 Ripple Type Generator — Official Visual Guide &amp; Tutorial v1.0</span>
-      <div class="title-controls">
-        <button onclick="window.history.back()">_</button>
-        <button onclick="window.location.reload()">□</button>
-        <button onclick="window.close()">✕</button>
-      </div>
-    </div>
-    
-    <div class="window-body">
-      <div class="header-content">
-        <h1>🌊 Ripple Type Generator: User Manual</h1>
-        <p class="subtitle">A kinetic typography &amp; optical ripple wave generator built in a retro Windows 98 aesthetic.</p>
-        <div>
-          <span class="tag-badge">Canvas 2D / WebGL Shaders</span>
-          <span class="tag-badge">Interactive Droplets</span>
-          <span class="tag-badge">Kinetic Motion</span>
-          <span class="tag-badge">High-Res Video / GIF Export</span>
-        </div>
-      </div>
-
-      <!-- Live Video Demo -->
-      <div class="window" style="margin-bottom: 16px;">
-        <div class="title-bar">
-          <span>🎬 Interactive Motion Demo (Live Recording)</span>
-        </div>
-        <div class="window-body">
-          <div class="video-card">
-            <video controls autoplay loop muted playsinline>
-              <source src="video/ripple-type-generator-demo.mp4" type="video/mp4">
-              <source src="video/ripple-type-generator-demo.webm" type="video/webm">
-              Your browser does not support HTML5 video.
-            </video>
-          </div>
-          <p style="font-size: 12px; color: #444;">
-            <strong>Demo highlights:</strong> Falling word sequences, real-time mouse click droplet triggers, organic ring break adjustments, typography perspective tilt, Cobalt &amp; Toxic neon optical presets, and aspect ratio switching.
-          </p>
-        </div>
-      </div>
-
-      <!-- Annotated Screenshots Grid -->
-      <div class="window" style="margin-bottom: 16px;">
-        <div class="title-bar">
-          <span>🗺️ Annotated UI &amp; Control Map (Click any image to expand)</span>
-        </div>
-        <div class="window-body">
-          <div class="grid">
-            
-            <div class="shot-card">
-              <h3>1. Full Workspace Overview</h3>
-              <img src="screenshots/02-full-workspace-annotated.png" alt="Workspace Overview" onclick="openModal(this.src)">
-              <p>Annotated guide to the title bar, left control rail, main kinetic canvas surface, and telemetry status bar.</p>
-            </div>
-
-            <div class="shot-card">
-              <h3>2. Control Rail &amp; Sliders</h3>
-              <img src="screenshots/03-control-rail-annotated.png" alt="Control Rail" onclick="openModal(this.src)">
-              <p>Breakdown of all parameters: Words, Finishes (Glow/Paper/Bleed), Ring Breaks, Line Weight, and Motion Speeds.</p>
-            </div>
-
-            <div class="shot-card">
-              <h3>3. Kinetic Canvas &amp; Click Droplets</h3>
-              <img src="screenshots/04-canvas-workspace-annotated.png" alt="Interactive Canvas" onclick="openModal(this.src)">
-              <p>Live water ripples with interactive click-to-drop coordinates and optical wavefront interference.</p>
-            </div>
-
-            <div class="shot-card">
-              <h3>4. Export Tools &amp; Telemetry</h3>
-              <img src="screenshots/05-export-statusbar-annotated.png" alt="Export Bar" onclick="openModal(this.src)">
-              <p>High-resolution PNG renders (up to 4K), 60fps WebM/MP4 video capture, animated GIF, and vector SVG exports.</p>
-            </div>
-
-            <div class="shot-card">
-              <h3>5. Cobalt Paper Diffusion Preset</h3>
-              <img src="screenshots/06-preset-cobalt-annotated.png" alt="Cobalt Diffusion" onclick="openModal(this.src)">
-              <p>Tactile paper grain diffusion with periwinkle and deep cobalt blue colorway.</p>
-            </div>
-
-            <div class="shot-card">
-              <h3>6. Angled Perspective Typography</h3>
-              <img src="screenshots/07-preset-typography-tilt.png" alt="Typography Tilt" onclick="openModal(this.src)">
-              <p>Isometric tilt angles, kerning adjustments, and custom typography scale.</p>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- Control Reference Table -->
-      <div class="window">
-        <div class="title-bar">
-          <span>⌨️ Keyboard Shortcuts &amp; Parameter Specs</span>
-        </div>
-        <div class="window-body">
-          <table class="win-table">
-            <thead>
-              <tr>
-                <th>Shortcut / Control</th>
-                <th>Parameter Name</th>
-                <th>Description &amp; Effect</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Space</strong></td>
-                <td><code>Play / Pause</code></td>
-                <td>Pauses and resumes the kinetic droplet and ripple simulation.</td>
-              </tr>
-              <tr>
-                <td><strong>R</strong></td>
-                <td><code>Preset Cycle</code></td>
-                <td>Instantly cycles between Glow, Cobalt, Noir, Sunset, and Toxic themes.</td>
-              </tr>
-              <tr>
-                <td><strong>C</strong></td>
-                <td><code>Clear Canvas</code></td>
-                <td>Dissipates all active ripples and drops immediately.</td>
-              </tr>
-              <tr>
-                <td><strong>S</strong></td>
-                <td><code>Quick Screenshot</code></td>
-                <td>Downloads a crisp 1:1 scale PNG snapshot of the active canvas.</td>
-              </tr>
-              <tr>
-                <td><strong>H</strong></td>
-                <td><code>Hide UI</code></td>
-                <td>Toggles the control sidebar for clean fullscreen presentation mode.</td>
-              </tr>
-              <tr>
-                <td><strong>Click / Tap</strong></td>
-                <td><code>Manual Drop</code></td>
-                <td>Spawns a water droplet at the exact cursor or touch location.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
+  <div class="win">
+    <div class="bar"><span>Ripple Type Generator — Tutorial</span><span class="dots">_ □ ✕</span></div>
+    <div class="body">
+      <h1>Ripple Type Generator</h1>
+      <p class="lede">Words fall as droplets onto a tilted sheet of water. Where each one lands it
+      leaves a ring, the ring carries the word, and overlapping rings interfere with each other.</p>
     </div>
   </div>
+
+  <div class="win">
+    <div class="bar"><span>Demo</span></div>
+    <div class="body">
+      <video controls autoplay loop muted playsinline poster="screenshots/02-full-workspace.png">
+        <source src="video/ripple-type-generator-demo.mp4" type="video/mp4">
+        <source src="video/ripple-type-generator-demo.webm" type="video/webm">
+      </video>
+      <p class="cap">A real 36-second screen recording, 1280×720 at 30fps.</p>
+      <table>
+        <tr><th>Time</th><th>What is happening</th></tr>
+        <tr><td class="k">0:00</td><td>Words fall on their own and leave ripples</td></tr>
+        <tr><td class="k">0:04</td><td>Clicking the canvas drops a word exactly where you click</td></tr>
+        <tr><td class="k">0:08</td><td><b>Type size</b> scales the words down, then up</td></tr>
+        <tr><td class="k">0:14</td><td><b>Lay flat</b> tips the words onto the water, then stands them straight</td></tr>
+        <tr><td class="k">0:20</td><td><b>Surface tilt</b> changes the angle the ripples are seen from</td></tr>
+        <tr><td class="k">0:26</td><td><b>Preset</b> swaps the background — Reference blue, Midnight, Rust, Ink on bone</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="bar"><span>Annotated screens — click to zoom</span></div>
+    <div class="body">
+      <div class="grid">
+        <div class="shot"><h3>Window layout</h3>
+          <img src="screenshots/02-full-workspace-annotated.png" alt="Workspace layout">
+          <p>Control rail, recording area, rail footer and status bar.</p></div>
+        <div class="shot"><h3>Every control group</h3>
+          <img src="screenshots/03-control-rail-annotated.png" alt="Control rail">
+          <p>Words, Finish &amp; colour, Rings, Typography, Motion &amp; camera.</p></div>
+        <div class="shot"><h3>Canvas and click drops</h3>
+          <img src="screenshots/04-canvas-workspace-annotated.png" alt="Canvas">
+          <p>Only the recording area is exported — the UI never appears in your file.</p></div>
+        <div class="shot"><h3>Export controls</h3>
+          <img src="screenshots/05-export-statusbar-annotated.png" alt="Export bar">
+          <p>Save image, Record video, page size and live pixel dimensions.</p></div>
+        <div class="shot"><h3>Diffused ink finish</h3>
+          <img src="screenshots/06-preset-cobalt-annotated.png" alt="Diffused ink">
+          <p>The Cobalt paper preset, where ink bleeds into the page.</p></div>
+        <div class="shot"><h3>Angled typography</h3>
+          <img src="screenshots/07-preset-typography-tilt.png" alt="Angled type">
+          <p>Type size, kerning and Lay flat working together.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="bar"><span>Finish &amp; colour — the Preset dropdown</span></div>
+    <div class="body">
+      <table>
+        <tr><th>Preset</th><th>Water</th><th>Ink</th></tr>
+        <tr><td class="k">Default artwork</td><td><i class="sw" style="background:#c5dc4d"></i>#c5dc4d</td><td><i class="sw" style="background:#00a943"></i>#00a943</td></tr>
+        <tr><td class="k">Reference blue</td><td><i class="sw" style="background:#5e9de0"></i>#5e9de0</td><td><i class="sw" style="background:#f0f5fd"></i>#f0f5fd</td></tr>
+        <tr><td class="k">Cobalt paper — ink blur</td><td><i class="sw" style="background:#f4f5f2"></i>#f4f5f2</td><td><i class="sw" style="background:#2454f5"></i>#2454f5</td></tr>
+        <tr><td class="k">Midnight</td><td><i class="sw" style="background:#0e1930"></i>#0e1930</td><td><i class="sw" style="background:#7fa9f0"></i>#7fa9f0</td></tr>
+        <tr><td class="k">Ink on bone</td><td><i class="sw" style="background:#efe7d8"></i>#efe7d8</td><td><i class="sw" style="background:#1d1c1a"></i>#1d1c1a</td></tr>
+        <tr><td class="k">Acid</td><td><i class="sw" style="background:#c9f24a"></i>#c9f24a</td><td><i class="sw" style="background:#152210"></i>#152210</td></tr>
+        <tr><td class="k">Rust</td><td><i class="sw" style="background:#bf4f2b"></i>#bf4f2b</td><td><i class="sw" style="background:#ffe7d4"></i>#ffe7d4</td></tr>
+      </table>
+      <p><b>Default artwork</b> also restores every slider, so reach for it to start over. The other
+      six only change colour and finish — which is why the demo sets up the type and tilt first,
+      then flips through backgrounds without losing them.</p>
+      <p><b>Finish</b> has two models: <b>Glow &amp; soft lines</b> (exposes Glow and Ring blur) and
+      <b>Diffused ink</b> (exposes Ink blur and Ink spread). <b>Grain</b> adds paper noise, and
+      <b>Water</b> / <b>Ink</b> are free colour pickers.</p>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="bar"><span>Rings</span></div>
+    <div class="body">
+      <table>
+        <tr><th>Control</th><th>What it does</th></tr>
+        <tr><td class="k">Line weight</td><td>Thickness of each ring</td></tr>
+        <tr><td class="k">Rings per drop</td><td>Concentric rings made by one droplet (1–9)</td></tr>
+        <tr><td class="k">Ripple spread</td><td>How far rings travel from the impact point</td></tr>
+        <tr><td class="k">Breaks</td><td>Cuts gaps in the circles so they look hand-drawn. <code>0%</code> is a perfect circle</td></tr>
+        <tr><td class="k">Interference</td><td>How strongly overlapping rings distort each other</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="bar"><span>Typography</span></div>
+    <div class="body">
+      <p><b>Font</b> — Inter, Windows bitmap (default), Poppins, Space Grotesk, Bebas Neue, Anton,
+      IBM Plex Mono, Playfair Display. Everything except Windows bitmap is fetched from Google
+      Fonts the first time you pick it.</p>
+      <table>
+        <tr><th>Control</th><th>What it does</th></tr>
+        <tr><td class="k">Type size</td><td>Scales the words — demo at 0:08</td></tr>
+        <tr><td class="k">Kerning</td><td>Letter spacing, in em</td></tr>
+        <tr><td class="k">Lay flat</td><td><code>0%</code> stands the word upright, <code>100%</code> lays it into the water plane — demo at 0:14</td></tr>
+        <tr><td class="k">Text glow</td><td>Halo on the letters only, independent of ring glow</td></tr>
+        <tr><td class="k">Keep words sharp</td><td>On by default. Letters stay crisp while rings stay soft</td></tr>
+        <tr><td class="k">Text blur</td><td>Only adjustable once <i>Keep words sharp</i> is off</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="bar"><span>Motion &amp; camera</span></div>
+    <div class="body">
+      <table>
+        <tr><th>Control</th><th>What it does</th></tr>
+        <tr><td class="k">Drop interval</td><td>Seconds between automatic drops. Higher = calmer</td></tr>
+        <tr><td class="k">Fall speed</td><td>How fast a droplet falls before impact</td></tr>
+        <tr><td class="k">Ripple speed</td><td>How fast rings expand once it lands</td></tr>
+        <tr><td class="k">Surface tilt</td><td>Viewing angle of the water, 6°–60° — demo at 0:20</td></tr>
+        <tr><td class="k">Perspective bow</td><td>How much perspective is applied</td></tr>
+      </table>
+      <p><b>Surface tilt</b> is what changes the angle of the ripples. Low values look almost
+      edge-on so rings read as flat ellipses; high values look down at the water and the rings
+      open into circles.</p>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="bar"><span>Exporting &amp; keyboard</span></div>
+    <div class="body">
+      <p><b>Save image</b> writes a PNG at the current pixel size. <b>Record video</b> captures the
+      canvas live as WebM (VP9, falling back to VP8), or MP4 where the browser supports it — press
+      it again to stop and download. <b>Page</b> sets the export size: Fit window, 16:9, 9:16,
+      4:4 (square), 18:9, or Custom via <b>W</b>/<b>H</b> and <b>Apply</b>. The canvas cannot be
+      resized while recording.</p>
+      <table>
+        <tr><th>Key</th><th>Action</th></tr>
+        <tr><td class="k">D</td><td>Drop a word now</td></tr>
+        <tr><td class="k">C</td><td>Clear the water</td></tr>
+        <tr><td class="k">Space</td><td>Pause / resume</td></tr>
+        <tr><td class="k">H</td><td>Show or hide the control rail</td></tr>
+        <tr><td class="k">Esc</td><td>Hide the control rail</td></tr>
+        <tr><td class="k">Click</td><td>Drop a word at that exact point on the canvas</td></tr>
+      </table>
+      <p>Shortcuts are ignored while you are typing, so <code>d</code>, <code>c</code> and
+      <code>h</code> work normally inside the Words box.</p>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="bar"><span>A quick recipe</span></div>
+    <div class="body">
+      <ol>
+        <li>Type four words into <b>Words</b>.</li>
+        <li>Pick <b>Midnight</b> from <b>Preset</b>.</li>
+        <li>Set <b>Lay flat</b> to about <code>20%</code> and <b>Surface tilt</b> to about <code>25°</code>.</li>
+        <li>Raise <b>Breaks</b> to roughly <code>40%</code> so the rings stop looking mechanical.</li>
+        <li>Set <b>Page</b> to <code>9:16</code> and press <b>Apply</b>.</li>
+        <li>Press <b>Record video</b>, let it run, press again to save.</li>
+      </ol>
+    </div>
+  </div>
+
 </div>
 
-<!-- Modal Zoom -->
-<div class="modal" id="imgModal" onclick="closeModal()">
-  <img id="modalImg" src="" alt="Zoomed Screenshot">
-</div>
-
+<div class="modal" id="zoom"><img id="zoomImg" alt=""></div>
 <script>
-function openModal(src) {
-  document.getElementById('modalImg').src = src;
-  document.getElementById('imgModal').style.display = 'flex';
-}
-function closeModal() {
-  document.getElementById('imgModal').style.display = 'none';
-}
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeModal();
-});
+  var zoom = document.getElementById('zoom'), zoomImg = document.getElementById('zoomImg');
+  document.querySelectorAll('.shot img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      zoomImg.src = img.src;
+      zoomImg.alt = img.alt;
+      zoom.style.display = 'flex';
+    });
+  });
+  zoom.addEventListener('click', function () { zoom.style.display = 'none'; });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') zoom.style.display = 'none';
+  });
 </script>
-
 </body>
 </html>
